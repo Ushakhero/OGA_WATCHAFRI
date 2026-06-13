@@ -1,0 +1,65 @@
+$schema: https://azuremlschemas.azureedge.net/promptflow/latest/Flow.schema.json
+name: OGA_WATCHAFRI
+description: >
+  Multi-step reasoning agent that detects cyber fraud, advises victims,
+  and educates African communities. Built for Microsoft Agents League Hackathon 2026.
+
+inputs:
+  user_input:
+    type: string
+    description: "User's description of a suspicious message, call, link, or situation"
+    default: "Someone sent me a WhatsApp message saying I won N500,000 and should send N5,000 to claim it"
+
+outputs:
+  fraud_detection:
+    type: string
+    reference: ${node1_fraud_detector.output}
+  incident_advice:
+    type: string
+    reference: ${node2_incident_advisor.output}
+  awareness_education:
+    type: string
+    reference: ${node3_awareness_educator.output}
+
+nodes:
+  - name: node1_fraud_detector
+    type: llm
+    source:
+      type: code
+      path: node1_detector.jinja2
+    inputs:
+      deployment_name: gpt-4o-mini
+      temperature: 0.2
+      max_tokens: 600
+      user_input: ${inputs.user_input}
+    connection: azure_openai_connection
+    api: chat
+
+  - name: node2_incident_advisor
+    type: llm
+    source:
+      type: code
+      path: node2_advisor.jinja2
+    inputs:
+      deployment_name: gpt-4o-mini
+      temperature: 0.3
+      max_tokens: 700
+      user_input: ${inputs.user_input}
+      fraud_analysis: ${node1_fraud_detector.output}
+    connection: azure_openai_connection
+    api: chat
+
+  - name: node3_awareness_educator
+    type: llm
+    source:
+      type: code
+      path: node3_educator.jinja2
+    inputs:
+      deployment_name: gpt-4o-mini
+      temperature: 0.4
+      max_tokens: 500
+      user_input: ${inputs.user_input}
+      fraud_analysis: ${node1_fraud_detector.output}
+      incident_advice: ${node2_incident_advisor.output}
+    connection: azure_openai_connection
+    api: chat

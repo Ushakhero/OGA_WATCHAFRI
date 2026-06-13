@@ -1,0 +1,5 @@
+openai>=1.30.0
+python-dotenv>=1.0.0
+promptflow>=1.10.0
+promptflow-azure>=1.10.0
+azure-ai-ml>=1.15.0
