@@ -3,3 +3,4 @@ python-dotenv>=1.0.0
 promptflow>=1.10.0
 promptflow-azure>=1.10.0
 azure-ai-ml>=1.15.0
+flask==3.0.0
