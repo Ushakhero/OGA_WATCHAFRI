@@ -5,3 +5,4 @@ promptflow-azure>=1.10.0
 azure-ai-ml>=1.15.0
 flask==3.0.0
 flask-limiter==3.5.0
+psycopg2-binary==2.9.9
