@@ -10,7 +10,13 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
 import json
-import psycopg2
+
+try:
+    import psycopg2
+    PSYCOPG2_AVAILABLE = True
+except ImportError:
+    PSYCOPG2_AVAILABLE = False
+    print("[warning] psycopg2 not available — usage logging disabled")
 
 load_dotenv()
 
@@ -24,6 +30,8 @@ limiter = Limiter(
 
 def log_usage(fraud_type, severity, source='public'):
     """Log each public query to the shared database for monitoring."""
+    if not PSYCOPG2_AVAILABLE:
+        return
     db_url = os.environ.get('DATABASE_URL')
     if not db_url:
         return
