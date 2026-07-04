@@ -48,7 +48,7 @@ def log_usage(fraud_type, severity, source='public'):
     except Exception as e:
         print(f"[usage_log] failed: {e}")
 
-LOGO_URL = "https://raw.githubusercontent.com/Ushakhero/OGA_WATCHAFRI/main/Oga_%20WatchAfri%20Logo.png"
+LOGO_URL = "https://raw.githubusercontent.com/Ushakhero/OGA_WATCHAFRI/main/ogawatchafri-logo.png.png"
 
 CHAT_UI = """<!DOCTYPE html>
 <html lang="en">
