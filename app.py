@@ -13,6 +13,15 @@ load_dotenv()
 
 app = Flask(__name__)
 
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["20 per hour", "5 per minute"]
+)
+
 CHAT_UI = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -221,11 +230,12 @@ def health():
     return jsonify({'status': 'OGA_WATCHAFRI is live', 'version': '1.0'})
 
 @app.route('/api/analyze', methods=['POST'])
+@limiter.limit("5 per minute")
 def analyze():
     data = request.get_json()
     if not data:
         return jsonify({'error': 'No JSON body provided'}), 400
-
+  
     situation = data.get('situation', '').strip()
     if not situation:
         return jsonify({'error': 'situation field is required'}), 400
