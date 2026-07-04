@@ -3,24 +3,52 @@ OGA_WATCHAFRI — Flask Web App with Chat Interface
 The Boss That Watches Over Africa
 """
 
-from flask import Flask, jsonify, request, Response
+from flask import Flask, jsonify, request
 from run_agent import node1_fraud_detector, node2_incident_advisor, node3_awareness_educator
 from dotenv import load_dotenv
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
 import json
+import psycopg2
 
 load_dotenv()
 
 app = Flask(__name__)
-
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["20 per hour", "5 per minute"]
 )
+
+def log_usage(fraud_type, severity, source='public'):
+    """Log each public query to the shared database for monitoring."""
+    db_url = os.environ.get('DATABASE_URL')
+    if not db_url:
+        return
+    try:
+        conn = psycopg2.connect(db_url)
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS usage_log (
+                        id SERIAL PRIMARY KEY,
+                        source TEXT,
+                        fraud_type TEXT,
+                        severity TEXT,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    );
+                """)
+                cur.execute("""
+                    INSERT INTO usage_log (source, fraud_type, severity)
+                    VALUES (%s, %s, %s);
+                """, (source, fraud_type, severity))
+        conn.close()
+    except Exception as e:
+        print(f"[usage_log] failed: {e}")
+
+LOGO_URL = "https://raw.githubusercontent.com/Ushakhero/OGA_WATCHAFRI/main/Oga_%20WatchAfri%20Logo.png"
 
 CHAT_UI = """<!DOCTYPE html>
 <html lang="en">
@@ -33,8 +61,8 @@ CHAT_UI = """<!DOCTYPE html>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{--bg:#0a1628;--s:#0f1e3a;--s2:#162444;--b:#1e3a5f;--gold:#c9961a;--g2:#f0c96e;--r:#ef4444;--gr:#10b981;--t:#e8f0fe;--m:#7a9bc4;}
 body{background:var(--bg);color:var(--t);font-family:'Space Grotesk',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
-header{padding:16px 24px;background:rgba(10,22,40,0.95);border-bottom:1px solid var(--b);display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;}
-.logo-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--gold),#8a6a1a);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+header{padding:12px 24px;background:rgba(10,22,40,0.95);border-bottom:1px solid var(--b);display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;}
+.logo-img{width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;}
 .logo-text h1{font-size:18px;font-weight:700;color:var(--gold);}
 .logo-text p{font-size:11px;color:var(--m);font-family:'DM Mono',monospace;}
 .pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--gr);animation:pulse 2s infinite;margin-left:auto;}
@@ -50,10 +78,10 @@ header{padding:16px 24px;background:rgba(10,22,40,0.95);border-bottom:1px solid 
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .message.user{flex-direction:row-reverse;}
 .avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;}
-.avatar.bot{background:linear-gradient(135deg,var(--gold),#8a6a1a);}
+.avatar.bot{background:linear-gradient(135deg,#c9961a,#8a6a1a);}
 .avatar.user{background:var(--s2);border:1px solid var(--b);}
 .bubble{max-width:80%;background:var(--s);border:1px solid var(--b);border-radius:16px;padding:14px 16px;font-size:14px;line-height:1.6;}
-.message.user .bubble{background:var(--s2);border-color:var(--gold);border-opacity:.3;}
+.message.user .bubble{background:var(--s2);border-color:var(--gold);}
 .node-section{margin-top:12px;padding:12px;border-radius:10px;border-left:3px solid;}
 .node-detect{border-color:var(--r);background:rgba(239,68,68,.06);}
 .node-advise{border-color:var(--gold);background:rgba(201,150,26,.06);}
@@ -87,7 +115,7 @@ pre{white-space:pre-wrap;word-wrap:break-word;font-family:'Space Grotesk',sans-s
 </head>
 <body>
 <header>
-  <div class="logo-icon">🛡️</div>
+  <img src="LOGO_URL_PLACEHOLDER" alt="OGA_WATCHAFRI" class="logo-img" onerror="this.style.display='none'">
   <div class="logo-text">
     <h1>OGA_WATCHAFRI</h1>
     <p>The Boss That Watches Over Africa · AI Fraud Defense</p>
@@ -112,7 +140,7 @@ pre{white-space:pre-wrap;word-wrap:break-word;font-family:'Space Grotesk',sans-s
 <div class="input-area">
   <div class="input-wrap">
     <textarea id="userInput" placeholder="Describe the suspicious message, call, or situation..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-    <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()">&#10148;</button>
   </div>
   <div class="disclaimer">OGA_WATCHAFRI does not store your messages. Always contact authorities for serious cases.</div>
 </div>
@@ -121,105 +149,74 @@ pre{white-space:pre-wrap;word-wrap:break-word;font-family:'Space Grotesk',sans-s
 function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
 function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
 function useExample(el){document.getElementById('userInput').value=el.textContent;sendMessage();}
-
-function addMessage(role, content){
-  const container=document.getElementById('chatContainer');
-  const div=document.createElement('div');
-  div.className=`message ${role}`;
-  const avatar=role==='user'?'👤':'🛡️';
-  const avatarClass=role==='user'?'user':'bot';
-  div.innerHTML=`<div class="avatar ${avatarClass}">${avatar}</div><div class="bubble" id="msg-${Date.now()}">${content}</div>`;
-  container.appendChild(div);
-  div.scrollIntoView({behavior:'smooth',block:'end'});
-  return div.querySelector('.bubble');
+function addMessage(role,content){
+  const c=document.getElementById('chatContainer');
+  const d=document.createElement('div');
+  d.className=`message ${role}`;
+  const av=role==='user'?'👤':'🛡️';
+  const ac=role==='user'?'user':'bot';
+  d.innerHTML=`<div class="avatar ${ac}">${av}</div><div class="bubble">${content}</div>`;
+  c.appendChild(d);
+  d.scrollIntoView({behavior:'smooth',block:'end'});
 }
-
 function showTyping(){
-  const container=document.getElementById('chatContainer');
-  const div=document.createElement('div');
-  div.className='message bot';
-  div.id='typing-indicator';
-  div.innerHTML=`<div class="avatar bot">🛡️</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
-  container.appendChild(div);
-  div.scrollIntoView({behavior:'smooth',block:'end'});
+  const c=document.getElementById('chatContainer');
+  const d=document.createElement('div');
+  d.className='message bot';d.id='typing-indicator';
+  d.innerHTML=`<div class="avatar bot">🛡️</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  c.appendChild(d);d.scrollIntoView({behavior:'smooth',block:'end'});
 }
-
-function removeTyping(){
-  const el=document.getElementById('typing-indicator');
-  if(el)el.remove();
-}
-
+function removeTyping(){const el=document.getElementById('typing-indicator');if(el)el.remove();}
 function formatResponse(data){
   const det=data.detection||{};
   const sev=(det.severity||'medium').toLowerCase();
-  const conf=det.confidence||'';
   const fraudType=det.fraud_type||'Unknown';
   const redFlags=(det.red_flags||[]).map(f=>`<div style="margin:3px 0;font-size:13px;">⚠️ ${f}</div>`).join('');
   const reasoning=det.reasoning||'';
-
   const advice=data.incident_advice||'';
   const education=data.education||'';
-
   return `
     <div style="font-weight:600;font-size:15px;margin-bottom:12px;">OGA_WATCHAFRI has analyzed your situation:</div>
-
     <div class="node-section node-detect">
       <div class="node-title">🔍 Node 1 — Fraud Detector</div>
-      <div style="font-weight:600;font-size:14px;">${fraudType} <span class="badge ${sev}">${(det.severity||'').toUpperCase()}</span> <span class="badge" style="background:rgba(255,255,255,.1);color:var(--m)">${conf} confidence</span></div>
-      ${redFlags ? `<div style="margin-top:8px;">${redFlags}</div>` : ''}
-      ${reasoning ? `<div style="margin-top:8px;font-size:12px;color:var(--m);font-style:italic;">${reasoning}</div>` : ''}
+      <div style="font-weight:600;font-size:14px;">${fraudType} <span class="badge ${sev}">${(det.severity||'').toUpperCase()}</span> <span class="badge" style="background:rgba(255,255,255,.1);color:var(--m)">${det.confidence||''} confidence</span></div>
+      ${redFlags?`<div style="margin-top:8px;">${redFlags}</div>`:''}
+      ${reasoning?`<div style="margin-top:8px;font-size:12px;color:var(--m);font-style:italic;">${reasoning}</div>`:''}
     </div>
-
     <div class="node-section node-advise" style="margin-top:10px;">
       <div class="node-title">🚨 Node 2 — Incident Advisor</div>
       <pre>${advice}</pre>
     </div>
-
     <div class="node-section node-educate" style="margin-top:10px;">
       <div class="node-title">🎓 Node 3 — Awareness Educator</div>
       <pre>${education}</pre>
     </div>
-
     <div style="margin-top:12px;font-size:12px;color:var(--m);text-align:center;font-family:'DM Mono',monospace;">
       ✅ OGA_WATCHAFRI analysis complete. Stay safe, stay sharp! 💪🌍
-    </div>
-  `;
+    </div>`;
 }
-
 async function sendMessage(){
   const input=document.getElementById('userInput');
   const btn=document.getElementById('sendBtn');
   const situation=input.value.trim();
   if(!situation)return;
-
-  addMessage('user', situation);
-  input.value='';
-  input.style.height='auto';
-  btn.disabled=true;
-  showTyping();
-
+  addMessage('user',situation);
+  input.value='';input.style.height='auto';
+  btn.disabled=true;showTyping();
   try{
-    const r=await fetch('/api/analyze',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({situation})
-    });
+    const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({situation})});
     const data=await r.json();
     removeTyping();
-    if(data.error){
-      addMessage('bot',`<span style="color:var(--r)">Error: ${data.error}</span>`);
-    } else {
-      addMessage('bot', formatResponse(data));
-    }
-  } catch(e){
-    removeTyping();
-    addMessage('bot',`<span style="color:var(--r)">Something went wrong. Please try again.</span>`);
-  }
+    if(data.error){addMessage('bot',`<span style="color:var(--r)">Error: ${data.error}</span>`);}
+    else{addMessage('bot',formatResponse(data));}
+  }catch(e){removeTyping();addMessage('bot',`<span style="color:var(--r)">Something went wrong. Please try again.</span>`);}
   btn.disabled=false;
 }
 </script>
 </body>
 </html>"""
+
+CHAT_UI = CHAT_UI.replace("LOGO_URL_PLACEHOLDER", LOGO_URL)
 
 @app.route('/', methods=['GET'])
 def index():
@@ -235,7 +232,7 @@ def analyze():
     data = request.get_json()
     if not data:
         return jsonify({'error': 'No JSON body provided'}), 400
-  
+
     situation = data.get('situation', '').strip()
     if not situation:
         return jsonify({'error': 'situation field is required'}), 400
@@ -252,6 +249,18 @@ def analyze():
         fraud_analysis = node1_fraud_detector(situation)
         incident_advice = node2_incident_advisor(situation, fraud_analysis)
         education = node3_awareness_educator(situation, fraud_analysis, incident_advice)
+
+        # Log usage for monitoring
+        import threading
+        threading.Thread(
+            target=log_usage,
+            kwargs={
+                'fraud_type': fraud_analysis.get('fraud_type', 'unknown'),
+                'severity': fraud_analysis.get('severity', 'unknown'),
+                'source': source
+            },
+            daemon=True
+        ).start()
 
         return jsonify({
             'status': 'complete',
