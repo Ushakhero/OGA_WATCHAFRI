@@ -115,8 +115,8 @@ header{padding:12px 24px;background:rgba(10,22,40,0.95);border-bottom:1px solid 
 .lang-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
 .lang-option{background:var(--s);border:1px solid var(--b);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--m);cursor:pointer;transition:all .2s;}
 .lang-option:hover,.lang-option.selected{border-color:var(--gold);color:var(--gold);}
-.translated-text{font-size:13px;color:var(--t);line-height:1.6;margin-top:8px;padding-top:8px;border-top:1px solid var(--b);display:none;}
-.translated-text.visible{display:block;}
+.translated-text{font-size:13px;color:var(--t);line-height:1.6;margin-top:8px;padding-top:8px;border-top:1px solid var(--b);display:none;min-height:40px;}
+.translated-text.visible{display:block !important;}
 .input-area{position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--b);padding:12px 16px;margin-top:auto;}
 .input-wrap{max-width:800px;margin:0 auto;display:flex;gap:8px;align-items:flex-end;}
 textarea{flex:1;background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 16px;color:var(--t);font-family:'Space Grotesk',sans-serif;font-size:14px;resize:none;outline:none;min-height:48px;max-height:120px;transition:border-color .2s;line-height:1.5;}
@@ -277,16 +277,27 @@ const LANGS=[
 ];
 
 async function translateText(text,targetLang,outputId){
+  const el=document.getElementById(outputId);
+  if(!el) return;
+  el.textContent='Translating...';
+  el.classList.add('visible');
+  el.style.color='var(--m)';
   try{
-    const url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0,500))}&langpair=en|${targetLang}`;
+    // Clean text — remove markdown symbols before translating
+    const clean=text.replace(/\*\*/g,'').replace(/##/g,'').replace(/\n+/g,' ').trim();
+    const url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean.substring(0,450))}&langpair=en|${targetLang}`;
     const r=await fetch(url);
     const d=await r.json();
-    const tr=d.responseData?.translatedText||text;
-    const el=document.getElementById(outputId);
-    if(el){el.textContent=tr;el.classList.add('visible');}
+    if(d.responseStatus===200){
+      el.textContent=d.responseData.translatedText;
+      el.style.color='var(--t)';
+    } else {
+      el.textContent='Translation limit reached. Please try again in a moment.';
+      el.style.color='var(--r)';
+    }
   }catch(e){
-    const el=document.getElementById(outputId);
-    if(el){el.textContent='Translation unavailable. Please try again.';el.classList.add('visible');}
+    el.textContent='Translation unavailable. Check your connection and try again.';
+    el.style.color='var(--r)';
   }
 }
 
