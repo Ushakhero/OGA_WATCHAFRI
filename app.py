@@ -1,22 +1,16 @@
 """
 OGA_WATCHAFRI — Flask Web App with Chat Interface
 The Boss That Watches Over Africa
+Voice Mode · Multi-Language · Hausa Support
 """
 
 from flask import Flask, jsonify, request
-from run_agent import node1_fraud_detector, node2_incident_advisor, node3_awareness_educator
+from run_agent import node1_fraud_detector, node2_incident_advisor, node3_awareness_educator, detect_language
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
-import json
-
-try:
-    import psycopg2
-    PSYCOPG2_AVAILABLE = True
-except ImportError:
-    PSYCOPG2_AVAILABLE = False
-    print("[warning] psycopg2 not available — usage logging disabled")
+import psycopg2
 
 load_dotenv()
 
@@ -28,10 +22,7 @@ limiter = Limiter(
     default_limits=["20 per hour", "5 per minute"]
 )
 
-def log_usage(fraud_type, severity, source='public'):
-    """Log each public query to the shared database for monitoring."""
-    if not PSYCOPG2_AVAILABLE:
-        return
+def log_usage(fraud_type, severity, source='public', language='english'):
     db_url = os.environ.get('DATABASE_URL')
     if not db_url:
         return
@@ -45,13 +36,14 @@ def log_usage(fraud_type, severity, source='public'):
                         source TEXT,
                         fraud_type TEXT,
                         severity TEXT,
+                        language TEXT DEFAULT 'english',
                         created_at TIMESTAMP DEFAULT NOW()
                     );
                 """)
                 cur.execute("""
-                    INSERT INTO usage_log (source, fraud_type, severity)
-                    VALUES (%s, %s, %s);
-                """, (source, fraud_type, severity))
+                    INSERT INTO usage_log (source, fraud_type, severity, language)
+                    VALUES (%s, %s, %s, %s);
+                """, (source, fraud_type, severity, language))
         conn.close()
     except Exception as e:
         print(f"[usage_log] failed: {e}")
@@ -114,7 +106,7 @@ header{padding:12px 24px;background:rgba(10,22,40,0.95);border-bottom:1px solid 
 .typing span:nth-child(3){animation-delay:.3s;}
 @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-8px)}}
 .response-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
-.action-btn{background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:5px 12px;font-size:11px;color:var(--m);cursor:pointer;transition:all .2s;font-family:'Space Grotesk',sans-serif;display:flex;align-items:center;gap:5px;}
+.action-btn{background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:5px 12px;font-size:11px;color:var(--m);cursor:pointer;transition:all .2s;font-family:'Space Grotesk',sans-serif;}
 .action-btn:hover{border-color:var(--gold);color:var(--gold);}
 .action-btn.speaking{border-color:var(--gr);color:var(--gr);}
 .translate-panel{margin-top:10px;background:var(--s2);border:1px solid var(--b);border-radius:10px;padding:12px;display:none;}
@@ -144,7 +136,7 @@ pre{white-space:pre-wrap;word-wrap:break-word;font-family:'Space Grotesk',sans-s
 </head>
 <body>
 <header>
-  <img src="LOGO_URL_PLACEHOLDER" alt="OGA_WATCHAFRI" class="logo-img" onerror="this.style.display='none'">
+  <img src="LOGO_PLACEHOLDER" alt="OGA_WATCHAFRI" class="logo-img" onerror="this.style.display='none'">
   <div class="logo-text">
     <h1>OGA_WATCHAFRI</h1>
     <p>The Boss That Watches Over Africa · AI Fraud Defense</p>
@@ -158,19 +150,19 @@ pre{white-space:pre-wrap;word-wrap:break-word;font-family:'Space Grotesk',sans-s
 </div>
 
 <div class="lang-toggle">
-  <button class="lang-btn active" id="btn-en" onclick="setLang('english')">🇬🇧 English</button>
-  <button class="lang-btn" id="btn-ha" onclick="setLang('hausa')">🇳🇬 Hausa</button>
+  <button class="lang-btn active" id="btn-en" onclick="setLang('english')">&#127468;&#127463; English</button>
+  <button class="lang-btn" id="btn-ha" onclick="setLang('hausa')">&#127475;&#127468; Hausa</button>
 </div>
 
 <div class="examples" id="examplesDiv">
-  <div class="example-chip en-chip" onclick="useExample(this)">Someone sent me a WhatsApp message saying I won ₦500,000 and should send ₦5,000 to claim it</div>
+  <div class="example-chip en-chip" onclick="useExample(this)">Someone sent me a WhatsApp message saying I won N500,000 and should send N5,000 to claim it</div>
   <div class="example-chip en-chip" onclick="useExample(this)">MTN called me asking for my SIM serial number and NIN</div>
   <div class="example-chip en-chip" onclick="useExample(this)">I got an SMS from GTBank saying my account will be blocked — click this link: gtb-verify.net</div>
   <div class="example-chip en-chip" onclick="useExample(this)">Someone offered me a crypto investment with 300% returns in 7 days</div>
-  <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">An aiko mun da saƙo a WhatsApp cewa mun lashe N500,000 amma dole mu biya N5,000 don karɓa</div>
+  <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">An aiko mun da sako a WhatsApp cewa mun lashe N500,000 amma dole mu biya N5,000 don karba</div>
   <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">MTN sun kira ni suna neman lambar SIM card da NIN na</div>
   <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">Na sami SMS daga GTBank cewa za a rufe asusuna — danna wannan hanyar</div>
-  <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">Wani ya ce zan samu riba mai yawa idan na zuba kuɗi a cikin crypto</div>
+  <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">Wani ya ce zan samu riba mai yawa idan na zuba kudi a cikin crypto</div>
 </div>
 
 <div class="chat-container" id="chatContainer"></div>
@@ -178,288 +170,249 @@ pre{white-space:pre-wrap;word-wrap:break-word;font-family:'Space Grotesk',sans-s
 <div class="input-area">
   <div class="input-wrap">
     <textarea id="userInput" placeholder="Describe the suspicious message, call, or situation..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-    <button class="mic-btn" id="micBtn" onclick="toggleVoice()" title="Speak your situation">🎤</button>
+    <button class="mic-btn" id="micBtn" onclick="toggleVoice()" title="Speak your situation">&#127908;</button>
     <button class="send-btn" id="sendBtn" onclick="sendMessage()">&#10148;</button>
   </div>
   <div class="disclaimer">OGA_WATCHAFRI does not store your messages. Always contact authorities for serious cases.</div>
 </div>
 
 <script>
-// ── STATE ────────────────────────────────────────────────────────────────────
-let selectedLang = null;
-let isListening = false;
-let recognition = null;
-let isSpeaking = false;
-let speechSynth = window.speechSynthesis;
-let msgCounter = 0;
+let selectedLang=null;
+let isListening=false;
+let recognition=null;
+let isSpeaking=false;
+let speechSynth=window.speechSynthesis;
+let msgCounter=0;
 
-// ── LANGUAGE TOGGLE ──────────────────────────────────────────────────────────
-function setLang(lang) {
-  selectedLang = lang;
-  document.getElementById('btn-en').classList.toggle('active', lang === 'english');
-  document.getElementById('btn-ha').classList.toggle('active', lang === 'hausa');
-  document.querySelectorAll('.en-chip').forEach(el => el.style.display = lang === 'hausa' ? 'none' : '');
-  document.querySelectorAll('.ha-chip').forEach(el => el.style.display = lang === 'hausa' ? '' : 'none');
-  const input = document.getElementById('userInput');
-  const heroTitle = document.getElementById('heroTitle');
-  const heroSub = document.getElementById('heroSub');
-  if (lang === 'hausa') {
-    input.placeholder = 'Ka bayyana abin da ya faru...';
-    heroTitle.textContent = 'Kana da saƙo ko kira mai damuwa?';
-    heroSub.textContent = 'Ka bayyana abin da ya faru kuma OGA_WATCHAFRI zai gano zamba, ba da shawara, kuma ya koya maka yadda za ka kare kanka.';
+function setLang(lang){
+  selectedLang=lang;
+  document.getElementById('btn-en').classList.toggle('active',lang==='english');
+  document.getElementById('btn-ha').classList.toggle('active',lang==='hausa');
+  document.querySelectorAll('.en-chip').forEach(el=>el.style.display=lang==='hausa'?'none':'');
+  document.querySelectorAll('.ha-chip').forEach(el=>el.style.display=lang==='hausa'?'':'none');
+  const input=document.getElementById('userInput');
+  if(lang==='hausa'){
+    input.placeholder='Ka bayyana abin da ya faru...';
+    document.getElementById('heroTitle').textContent='Kana da sako ko kira mai damuwa?';
+    document.getElementById('heroSub').textContent='Ka bayyana abin da ya faru kuma OGA_WATCHAFRI zai gano zamba, ba da shawara, kuma ya koya maka yadda za ka kare kanka.';
   } else {
-    input.placeholder = 'Describe the suspicious message, call, or situation...';
-    heroTitle.textContent = 'Got a suspicious message, call, or situation?';
-    heroSub.textContent = 'Describe what happened and OGA_WATCHAFRI will detect the fraud, advise you on what to do, and teach you how to stay safe — in plain language.';
+    input.placeholder='Describe the suspicious message, call, or situation...';
+    document.getElementById('heroTitle').textContent='Got a suspicious message, call, or situation?';
+    document.getElementById('heroSub').textContent='Describe what happened and OGA_WATCHAFRI will detect the fraud, advise you on what to do, and teach you how to stay safe — in plain language.';
   }
 }
 
-// ── VOICE INPUT ──────────────────────────────────────────────────────────────
-function toggleVoice() {
-  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+function toggleVoice(){
+  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){
     alert('Voice input is not supported in your browser. Please use Chrome or Edge.');
     return;
   }
-  if (isListening) {
-    stopListening();
-  } else {
-    startListening();
-  }
+  if(isListening){stopListening();}else{startListening();}
 }
 
-function startListening() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SpeechRecognition();
-  recognition.continuous = false;
-  recognition.interimResults = true;
-  recognition.lang = selectedLang === 'hausa' ? 'ha-NG' : 'en-NG';
-
-  recognition.onstart = () => {
-    isListening = true;
+function startListening(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recognition=new SR();
+  recognition.continuous=false;
+  recognition.interimResults=true;
+  recognition.lang=selectedLang==='hausa'?'ha-NG':'en-NG';
+  recognition.onstart=()=>{
+    isListening=true;
     document.getElementById('micBtn').classList.add('listening');
-    document.getElementById('micBtn').textContent = '🔴';
-    document.getElementById('userInput').placeholder = selectedLang === 'hausa' ? 'Ina sauraro...' : 'Listening...';
+    document.getElementById('micBtn').textContent='&#128308;';
+    document.getElementById('userInput').placeholder=selectedLang==='hausa'?'Ina sauraro...':'Listening...';
   };
-
-  recognition.onresult = (event) => {
-    let transcript = '';
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      transcript += event.results[i][0].transcript;
-    }
-    document.getElementById('userInput').value = transcript;
+  recognition.onresult=(e)=>{
+    let t='';
+    for(let i=e.resultIndex;i<e.results.length;i++) t+=e.results[i][0].transcript;
+    document.getElementById('userInput').value=t;
     autoResize(document.getElementById('userInput'));
   };
-
-  recognition.onend = () => {
+  recognition.onend=()=>{
     stopListening();
-    const text = document.getElementById('userInput').value.trim();
-    if (text) sendMessage();
+    const t=document.getElementById('userInput').value.trim();
+    if(t) sendMessage();
   };
-
-  recognition.onerror = (e) => {
-    stopListening();
-    console.error('Speech recognition error:', e.error);
-  };
-
+  recognition.onerror=(e)=>{stopListening();console.error('Speech error:',e.error);};
   recognition.start();
 }
 
-function stopListening() {
-  isListening = false;
-  if (recognition) recognition.stop();
-  const btn = document.getElementById('micBtn');
+function stopListening(){
+  isListening=false;
+  if(recognition) recognition.stop();
+  const btn=document.getElementById('micBtn');
   btn.classList.remove('listening');
-  btn.textContent = '🎤';
-  const lang = selectedLang === 'hausa';
-  document.getElementById('userInput').placeholder = lang ? 'Ka bayyana abin da ya faru...' : 'Describe the suspicious message, call, or situation...';
+  btn.textContent='&#127908;';
+  document.getElementById('userInput').placeholder=selectedLang==='hausa'?'Ka bayyana abin da ya faru...':'Describe the suspicious message, call, or situation...';
 }
 
-// ── VOICE OUTPUT ─────────────────────────────────────────────────────────────
-function speakText(text, lang, btnId) {
-  if (isSpeaking) {
-    speechSynth.cancel();
-    isSpeaking = false;
-    const btn = document.getElementById(btnId);
-    if (btn) { btn.classList.remove('speaking'); btn.textContent = '🔊 ' + (lang === 'hausa' ? 'Karanta' : 'Listen'); }
+function speakText(text,lang,btnId){
+  if(isSpeaking){
+    speechSynth.cancel();isSpeaking=false;
+    const b=document.getElementById(btnId);
+    if(b){b.classList.remove('speaking');b.textContent=lang==='hausa'?'&#128266; Karanta':'&#128266; Listen';}
     return;
   }
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = lang === 'hausa' ? 'ha' : 'en-NG';
-  utterance.rate = 0.9;
-  utterance.pitch = 1.0;
-  isSpeaking = true;
-  const btn = document.getElementById(btnId);
-  if (btn) { btn.classList.add('speaking'); btn.textContent = '⏹️ ' + (lang === 'hausa' ? 'Tsaya' : 'Stop'); }
-  utterance.onend = () => {
-    isSpeaking = false;
-    if (btn) { btn.classList.remove('speaking'); btn.textContent = '🔊 ' + (lang === 'hausa' ? 'Karanta' : 'Listen'); }
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang=lang==='hausa'?'ha':'en-NG';
+  u.rate=0.9;u.pitch=1.0;
+  isSpeaking=true;
+  const b=document.getElementById(btnId);
+  if(b){b.classList.add('speaking');b.textContent=lang==='hausa'?'&#9209;&#65039; Tsaya':'&#9209;&#65039; Stop';}
+  u.onend=()=>{
+    isSpeaking=false;
+    if(b){b.classList.remove('speaking');b.textContent=lang==='hausa'?'&#128266; Karanta':'&#128266; Listen';}
   };
-  speechSynth.speak(utterance);
+  speechSynth.speak(u);
 }
 
-// ── TRANSLATION ───────────────────────────────────────────────────────────────
-const LANG_OPTIONS = [
-  { code: 'yo', label: '🇳🇬 Yoruba', mm: 'yo' },
-  { code: 'ig', label: '🇳🇬 Igbo', mm: 'ig' },
-  { code: 'ha', label: '🇳🇬 Hausa', mm: 'ha' },
-  { code: 'en', label: '🇬🇧 English', mm: 'en' },
-  { code: 'fr', label: '🇫🇷 French', mm: 'fr' },
-  { code: 'ar', label: '🇸🇦 Arabic', mm: 'ar' },
-  { code: 'pcm', label: '🇳🇬 Pidgin', mm: 'pcm' },
+const LANGS=[
+  {code:'yo',label:'&#127475;&#127468; Yoruba',mm:'yo'},
+  {code:'ig',label:'&#127475;&#127468; Igbo',mm:'ig'},
+  {code:'ha',label:'&#127475;&#127468; Hausa',mm:'ha'},
+  {code:'en',label:'&#127468;&#127463; English',mm:'en'},
+  {code:'fr',label:'&#127467;&#127479; French',mm:'fr'},
+  {code:'ar',label:'&#127462;&#127466; Arabic',mm:'ar'},
+  {code:'pcm',label:'&#127475;&#127468; Pidgin',mm:'en-NG'},
 ];
 
-async function translateText(text, targetLang, outputId) {
-  try {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0,500))}&langpair=en|${targetLang}`;
-    const r = await fetch(url);
-    const d = await r.json();
-    const translated = d.responseData?.translatedText || text;
-    const el = document.getElementById(outputId);
-    if (el) { el.textContent = translated; el.classList.add('visible'); }
-  } catch(e) {
-    const el = document.getElementById(outputId);
-    if (el) { el.textContent = 'Translation unavailable. Please try again.'; el.classList.add('visible'); }
+async function translateText(text,targetLang,outputId){
+  try{
+    const url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0,500))}&langpair=en|${targetLang}`;
+    const r=await fetch(url);
+    const d=await r.json();
+    const tr=d.responseData?.translatedText||text;
+    const el=document.getElementById(outputId);
+    if(el){el.textContent=tr;el.classList.add('visible');}
+  }catch(e){
+    const el=document.getElementById(outputId);
+    if(el){el.textContent='Translation unavailable. Please try again.';el.classList.add('visible');}
   }
 }
 
-function toggleTranslate(panelId) {
-  const panel = document.getElementById(panelId);
-  if (panel) panel.classList.toggle('visible');
+function toggleTranslate(panelId){
+  const p=document.getElementById(panelId);
+  if(p) p.classList.toggle('visible');
 }
 
-function selectTranslation(langCode, langLabel, rawText, translatedId, panelId, btnId) {
-  document.querySelectorAll(`#${panelId} .lang-option`).forEach(el => el.classList.remove('selected'));
-  const btn = document.getElementById(btnId);
-  if (btn) btn.classList.add('selected');
-  translateText(rawText, langCode, translatedId);
+function selectTranslation(langCode,rawText,translatedId,panelId,btnId){
+  document.querySelectorAll(`#${panelId} .lang-option`).forEach(el=>el.classList.remove('selected'));
+  const b=document.getElementById(btnId);
+  if(b) b.classList.add('selected');
+  translateText(rawText,langCode,translatedId);
 }
 
-// ── CHAT ──────────────────────────────────────────────────────────────────────
-function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
-function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
-function useExample(el) { document.getElementById('userInput').value = el.textContent; sendMessage(); }
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
+function useExample(el){document.getElementById('userInput').value=el.textContent;sendMessage();}
 
-function addMessage(role, content) {
-  const c = document.getElementById('chatContainer');
-  const d = document.createElement('div');
-  d.className = `message ${role}`;
-  const av = role === 'user' ? '👤' : '🛡️';
-  const ac = role === 'user' ? 'user' : 'bot';
-  d.innerHTML = `<div class="avatar ${ac}">${av}</div><div class="bubble">${content}</div>`;
+function addMessage(role,content){
+  const c=document.getElementById('chatContainer');
+  const d=document.createElement('div');
+  d.className=`message ${role}`;
+  const av=role==='user'?'&#128100;':'&#128737;&#65039;';
+  const ac=role==='user'?'user':'bot';
+  d.innerHTML=`<div class="avatar ${ac}">${av}</div><div class="bubble">${content}</div>`;
   c.appendChild(d);
-  d.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  d.scrollIntoView({behavior:'smooth',block:'end'});
   return d.querySelector('.bubble');
 }
 
-function showTyping() {
-  const c = document.getElementById('chatContainer');
-  const d = document.createElement('div');
-  d.className = 'message bot'; d.id = 'typing-indicator';
-  d.innerHTML = `<div class="avatar bot">🛡️</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
-  c.appendChild(d);
-  d.scrollIntoView({ behavior: 'smooth', block: 'end' });
+function showTyping(){
+  const c=document.getElementById('chatContainer');
+  const d=document.createElement('div');
+  d.className='message bot';d.id='typing-indicator';
+  d.innerHTML=`<div class="avatar bot">&#128737;&#65039;</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  c.appendChild(d);d.scrollIntoView({behavior:'smooth',block:'end'});
 }
-function removeTyping() { const el = document.getElementById('typing-indicator'); if (el) el.remove(); }
+function removeTyping(){const el=document.getElementById('typing-indicator');if(el)el.remove();}
 
-function formatResponse(data, msgId) {
-  const det = data.detection || {};
-  const sev = (det.severity || 'medium').toLowerCase();
-  const fraudType = det.fraud_type || 'Unknown';
-  const redFlags = (det.red_flags || []).map(f => `<div style="margin:3px 0;font-size:13px;">⚠️ ${f}</div>`).join('');
-  const reasoning = det.reasoning || '';
-  const advice = data.incident_advice || '';
-  const education = data.education || '';
-  const lang = data.language || 'english';
+function formatResponse(data,msgId){
+  const det=data.detection||{};
+  const sev=(det.severity||'medium').toLowerCase();
+  const fraudType=det.fraud_type||'Unknown';
+  const redFlags=(det.red_flags||[]).map(f=>`<div style="margin:3px 0;font-size:13px;">&#9888;&#65039; ${f}</div>`).join('');
+  const reasoning=det.reasoning||'';
+  const advice=data.incident_advice||'';
+  const education=data.education||'';
+  const lang=data.language||'english';
+  const speechText=`${fraudType}. ${reasoning}. ${advice}`;
+  const panelId=`tp-${msgId}`;
+  const translatedId=`tr-${msgId}`;
+  const speakId=`sp-${msgId}`;
+  const rawForTranslation=advice+' '+education;
 
-  // Full text for speech
-  const speechText = `${fraudType}. ${reasoning}. ${advice}`;
-  const panelId = `tp-${msgId}`;
-  const translatedId = `tr-${msgId}`;
-  const speakId = `sp-${msgId}`;
-
-  // Build language option buttons
-  const langButtons = LANG_OPTIONS
-    .filter(l => !(l.code === 'ha' && lang === 'hausa') && !(l.code === 'en' && lang === 'english'))
-    .map(l => `<div class="lang-option" id="lb-${msgId}-${l.code}" onclick="selectTranslation('${l.mm}','${l.label}',${JSON.stringify(advice + ' ' + education)},'${translatedId}','${panelId}','lb-${msgId}-${l.code}')">${l.label}</div>`)
+  const langButtons=LANGS
+    .filter(l=>!(l.code==='ha'&&lang==='hausa')&&!(l.code==='en'&&lang==='english'))
+    .map(l=>`<div class="lang-option" id="lb-${msgId}-${l.code}" onclick="selectTranslation('${l.mm}',${JSON.stringify(rawForTranslation)},'${translatedId}','${panelId}','lb-${msgId}-${l.code}')">${l.label}</div>`)
     .join('');
 
-  const n1Title = lang === 'hausa' ? '🔍 NODE 1 — GANO ZAMBA' : '🔍 Node 1 — Fraud Detector';
-  const n2Title = lang === 'hausa' ? '🚨 NODE 2 — SHAWARA' : '🚨 Node 2 — Incident Advisor';
-  const n3Title = lang === 'hausa' ? '🎓 NODE 3 — ILIMI' : '🎓 Node 3 — Awareness Educator';
-  const listenLabel = lang === 'hausa' ? '🔊 Karanta' : '🔊 Listen';
-  const translateLabel = lang === 'hausa' ? '🌍 Fassara' : '🌍 Translate';
-  const analysisLabel = lang === 'hausa' ? 'Bincike ya ƙare. Kare kanka!' : 'Analysis complete. Stay safe!';
-  const translateTitle = lang === 'hausa' ? 'Zaɓi harshe' : 'Translate to:';
+  const n1=lang==='hausa'?'&#128269; NODE 1 &#8212; GANO ZAMBA':'&#128269; Node 1 &#8212; Fraud Detector';
+  const n2=lang==='hausa'?'&#128680; NODE 2 &#8212; SHAWARA':'&#128680; Node 2 &#8212; Incident Advisor';
+  const n3=lang==='hausa'?'&#127891; NODE 3 &#8212; ILIMI':'&#127891; Node 3 &#8212; Awareness Educator';
+  const listenLbl=lang==='hausa'?'&#128266; Karanta':'&#128266; Listen';
+  const transLbl=lang==='hausa'?'&#127758; Fassara':'&#127758; Translate';
+  const transTitle=lang==='hausa'?'Zabi harshe:':'Translate to:';
+  const doneLbl=lang==='hausa'?'Bincike ya kare. Kare kanka! &#128170;&#127758;':'Analysis complete. Stay safe! &#128170;&#127758;';
 
   return `
-    <div style="font-weight:600;font-size:15px;margin-bottom:12px;">${lang === 'hausa' ? 'OGA_WATCHAFRI ya bincika yanayin ka:' : 'OGA_WATCHAFRI has analyzed your situation:'}</div>
-
+    <div style="font-weight:600;font-size:15px;margin-bottom:12px;">${lang==='hausa'?'OGA_WATCHAFRI ya bincika yanayin ka:':'OGA_WATCHAFRI has analyzed your situation:'}</div>
     <div class="node-section node-detect">
-      <div class="node-title">${n1Title}</div>
-      <div style="font-weight:600;font-size:14px;">${fraudType} <span class="badge ${sev}">${(det.severity || '').toUpperCase()}</span> <span class="badge" style="background:rgba(255,255,255,.1);color:var(--m)">${det.confidence || ''} confidence</span></div>
-      ${redFlags ? `<div style="margin-top:8px;">${redFlags}</div>` : ''}
-      ${reasoning ? `<div style="margin-top:8px;font-size:12px;color:var(--m);font-style:italic;">${reasoning}</div>` : ''}
+      <div class="node-title">${n1}</div>
+      <div style="font-weight:600;font-size:14px;">${fraudType} <span class="badge ${sev}">${(det.severity||'').toUpperCase()}</span> <span class="badge" style="background:rgba(255,255,255,.1);color:var(--m)">${det.confidence||''} confidence</span></div>
+      ${redFlags?`<div style="margin-top:8px;">${redFlags}</div>`:''}
+      ${reasoning?`<div style="margin-top:8px;font-size:12px;color:var(--m);font-style:italic;">${reasoning}</div>`:''}
     </div>
-
     <div class="node-section node-advise" style="margin-top:10px;">
-      <div class="node-title">${n2Title}</div>
+      <div class="node-title">${n2}</div>
       <pre>${advice}</pre>
     </div>
-
     <div class="node-section node-educate" style="margin-top:10px;">
-      <div class="node-title">${n3Title}</div>
+      <div class="node-title">${n3}</div>
       <pre>${education}</pre>
     </div>
-
     <div class="response-actions">
-      <button class="action-btn" id="${speakId}" onclick="speakText(${JSON.stringify(speechText)},'${lang}','${speakId}')">${listenLabel}</button>
-      <button class="action-btn" onclick="toggleTranslate('${panelId}')">${translateLabel}</button>
+      <button class="action-btn" id="${speakId}" onclick="speakText(${JSON.stringify(speechText)},'${lang}','${speakId}')">${listenLbl}</button>
+      <button class="action-btn" onclick="toggleTranslate('${panelId}')">${transLbl}</button>
     </div>
-
     <div class="translate-panel" id="${panelId}">
-      <h4>${translateTitle}</h4>
+      <h4>${transTitle}</h4>
       <div class="lang-grid">${langButtons}</div>
       <div class="translated-text" id="${translatedId}"></div>
     </div>
-
-    <div style="margin-top:12px;font-size:12px;color:var(--m);text-align:center;font-family:'DM Mono',monospace;">
-      ✅ ${analysisLabel} 💪🌍
-    </div>`;
+    <div style="margin-top:12px;font-size:12px;color:var(--m);text-align:center;font-family:'DM Mono',monospace;">&#9989; ${doneLbl}</div>`;
 }
 
-async function sendMessage() {
-  const input = document.getElementById('userInput');
-  const btn = document.getElementById('sendBtn');
-  const situation = input.value.trim();
-  if (!situation) return;
-  addMessage('user', situation);
-  input.value = ''; input.style.height = 'auto';
-  btn.disabled = true; showTyping();
-  try {
-    const r = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ situation, language: selectedLang })
+async function sendMessage(){
+  const input=document.getElementById('userInput');
+  const btn=document.getElementById('sendBtn');
+  const situation=input.value.trim();
+  if(!situation) return;
+  addMessage('user',situation);
+  input.value='';input.style.height='auto';
+  btn.disabled=true;showTyping();
+  try{
+    const r=await fetch('/api/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({situation,language:selectedLang})
     });
-    const data = await r.json();
+    const data=await r.json();
     removeTyping();
     msgCounter++;
-    if (data.error) {
-      addMessage('bot', `<span style="color:var(--r)">Error: ${data.error}</span>`);
-    } else {
-      addMessage('bot', formatResponse(data, msgCounter));
-    }
-  } catch (e) {
+    if(data.error){addMessage('bot',`<span style="color:var(--r)">Error: ${data.error}</span>`);}
+    else{addMessage('bot',formatResponse(data,msgCounter));}
+  }catch(e){
     removeTyping();
-    addMessage('bot', `<span style="color:var(--r)">Something went wrong. Please try again.</span>`);
+    addMessage('bot',`<span style="color:var(--r)">Something went wrong. Please try again.</span>`);
   }
-  btn.disabled = false;
+  btn.disabled=false;
 }
 </script>
 </body>
 </html>"""
 
-CHAT_UI = CHAT_UI.replace("LOGO_URL_PLACEHOLDER", LOGO_URL)
+CHAT_UI = CHAT_UI.replace("LOGO_PLACEHOLDER", LOGO_URL)
 
 @app.route('/', methods=['GET'])
 def index():
@@ -467,7 +420,7 @@ def index():
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({'status': 'OGA_WATCHAFRI is live', 'version': '1.0'})
+    return jsonify({'status': 'OGA_WATCHAFRI is live', 'version': '2.0', 'features': ['voice-input', 'voice-output', 'hausa', 'multi-language-translation']})
 
 @app.route('/api/analyze', methods=['POST'])
 @limiter.limit("5 per minute")
@@ -484,23 +437,27 @@ def analyze():
     pattern = data.get('pattern', '')
     risk_level = data.get('risk_level', '')
     fraud_score = data.get('fraud_score', '')
+    language = data.get('language', None)
 
     if source == 'goldenshield' and pattern:
         situation = f"{situation}\n\n[GoldenShield detected: {pattern} pattern, risk level {risk_level}, fraud score {fraud_score}%]"
 
-    try:
-        fraud_analysis = node1_fraud_detector(situation)
-        incident_advice = node2_incident_advisor(situation, fraud_analysis)
-        education = node3_awareness_educator(situation, fraud_analysis, incident_advice)
+    if language is None:
+        language = detect_language(situation)
 
-        # Log usage for monitoring
+    try:
+        fraud_analysis = node1_fraud_detector(situation, language)
+        incident_advice = node2_incident_advisor(situation, fraud_analysis, language)
+        education = node3_awareness_educator(situation, fraud_analysis, incident_advice, language)
+
         import threading
         threading.Thread(
             target=log_usage,
             kwargs={
                 'fraud_type': fraud_analysis.get('fraud_type', 'unknown'),
                 'severity': fraud_analysis.get('severity', 'unknown'),
-                'source': source
+                'source': source,
+                'language': language
             },
             daemon=True
         ).start()
@@ -508,6 +465,7 @@ def analyze():
         return jsonify({
             'status': 'complete',
             'source': source,
+            'language': language,
             'detection': fraud_analysis,
             'incident_advice': incident_advice,
             'education': education
