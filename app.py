@@ -67,7 +67,7 @@ CHAT_UI = """<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-:root{--bg:#0a1628;--s:#0f1e3a;--s2:#162444;--b:#1e3a5f;--gold:#c9961a;--g2:#f0c96e;--r:#ef4444;--gr:#10b981;--t:#e8f0fe;--m:#7a9bc4;}
+:root{--bg:#0a1628;--s:#0f1e3a;--s2:#162444;--b:#1e3a5f;--gold:#c9961a;--r:#ef4444;--gr:#10b981;--t:#e8f0fe;--m:#7a9bc4;}
 body{background:var(--bg);color:var(--t);font-family:'Space Grotesk',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
 header{padding:12px 24px;background:rgba(10,22,40,0.95);border-bottom:1px solid var(--b);display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;}
 .logo-img{width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;}
@@ -75,13 +75,18 @@ header{padding:12px 24px;background:rgba(10,22,40,0.95);border-bottom:1px solid 
 .logo-text p{font-size:11px;color:var(--m);font-family:'DM Mono',monospace;}
 .pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--gr);animation:pulse 2s infinite;margin-left:auto;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.hero{text-align:center;padding:40px 24px 24px;max-width:700px;margin:0 auto;}
-.hero h2{font-size:28px;font-weight:700;color:var(--t);margin-bottom:10px;line-height:1.3;}
-.hero p{font-size:15px;color:var(--m);line-height:1.6;}
-.examples{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:20px 24px 0;}
+.hero{text-align:center;padding:32px 24px 16px;max-width:700px;margin:0 auto;}
+.hero h2{font-size:26px;font-weight:700;color:var(--t);margin-bottom:8px;line-height:1.3;}
+.hero p{font-size:14px;color:var(--m);line-height:1.6;}
+.lang-toggle{display:flex;justify-content:center;gap:10px;margin:14px 24px 0;}
+.lang-btn{background:var(--s2);border:1px solid var(--b);border-radius:20px;padding:7px 20px;font-size:13px;color:var(--m);cursor:pointer;transition:all .2s;font-family:'Space Grotesk',sans-serif;}
+.lang-btn.active{background:var(--gold);color:var(--bg);border-color:var(--gold);font-weight:700;}
+.lang-btn:hover{border-color:var(--gold);color:var(--gold);}
+.lang-btn.active:hover{color:var(--bg);}
+.examples{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 24px 0;}
 .example-chip{background:var(--s2);border:1px solid var(--b);border-radius:20px;padding:7px 14px;font-size:12px;color:var(--m);cursor:pointer;transition:all .2s;}
 .example-chip:hover{border-color:var(--gold);color:var(--gold);}
-.chat-container{flex:1;max-width:800px;width:100%;margin:20px auto 0;padding:0 16px;display:flex;flex-direction:column;gap:16px;}
+.chat-container{flex:1;max-width:800px;width:100%;margin:16px auto 0;padding:0 16px;display:flex;flex-direction:column;gap:16px;}
 .message{display:flex;gap:12px;animation:fadeIn .3s ease;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .message.user{flex-direction:row-reverse;}
@@ -108,17 +113,33 @@ header{padding:12px 24px;background:rgba(10,22,40,0.95);border-bottom:1px solid 
 .typing span:nth-child(2){animation-delay:.15s;}
 .typing span:nth-child(3){animation-delay:.3s;}
 @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-8px)}}
-.input-area{position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--b);padding:16px;margin-top:auto;}
-.input-wrap{max-width:800px;margin:0 auto;display:flex;gap:10px;align-items:flex-end;}
+.response-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.action-btn{background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:5px 12px;font-size:11px;color:var(--m);cursor:pointer;transition:all .2s;font-family:'Space Grotesk',sans-serif;display:flex;align-items:center;gap:5px;}
+.action-btn:hover{border-color:var(--gold);color:var(--gold);}
+.action-btn.speaking{border-color:var(--gr);color:var(--gr);}
+.translate-panel{margin-top:10px;background:var(--s2);border:1px solid var(--b);border-radius:10px;padding:12px;display:none;}
+.translate-panel.visible{display:block;}
+.translate-panel h4{font-size:11px;color:var(--m);margin-bottom:8px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px;}
+.lang-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.lang-option{background:var(--s);border:1px solid var(--b);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--m);cursor:pointer;transition:all .2s;}
+.lang-option:hover,.lang-option.selected{border-color:var(--gold);color:var(--gold);}
+.translated-text{font-size:13px;color:var(--t);line-height:1.6;margin-top:8px;padding-top:8px;border-top:1px solid var(--b);display:none;}
+.translated-text.visible{display:block;}
+.input-area{position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--b);padding:12px 16px;margin-top:auto;}
+.input-wrap{max-width:800px;margin:0 auto;display:flex;gap:8px;align-items:flex-end;}
 textarea{flex:1;background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 16px;color:var(--t);font-family:'Space Grotesk',sans-serif;font-size:14px;resize:none;outline:none;min-height:48px;max-height:120px;transition:border-color .2s;line-height:1.5;}
 textarea:focus{border-color:var(--gold);}
 textarea::placeholder{color:var(--m);}
+.mic-btn{width:48px;height:48px;background:var(--s2);border:1px solid var(--b);border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;font-size:20px;}
+.mic-btn:hover{border-color:var(--gold);}
+.mic-btn.listening{background:rgba(239,68,68,.15);border-color:var(--r);animation:micPulse 1s infinite;}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
 .send-btn{width:48px;height:48px;background:linear-gradient(135deg,var(--gold),#a07828);border:none;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;color:#0a1628;font-size:20px;}
 .send-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(201,150,26,.4);}
 .send-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
-.disclaimer{text-align:center;font-size:11px;color:var(--m);padding:8px 24px;font-family:'DM Mono',monospace;}
+.disclaimer{text-align:center;font-size:11px;color:var(--m);padding:6px 24px;font-family:'DM Mono',monospace;}
 pre{white-space:pre-wrap;word-wrap:break-word;font-family:'Space Grotesk',sans-serif;font-size:13px;}
-@media(max-width:600px){.hero h2{font-size:22px;}.bubble{max-width:92%;}}
+@media(max-width:600px){.hero h2{font-size:20px;}.bubble{max-width:92%;}}
 </style>
 </head>
 <body>
@@ -132,15 +153,24 @@ pre{white-space:pre-wrap;word-wrap:break-word;font-family:'Space Grotesk',sans-s
 </header>
 
 <div class="hero">
-  <h2>Got a suspicious message, call, or situation?</h2>
-  <p>Describe what happened and OGA_WATCHAFRI will detect the fraud, advise you on what to do, and teach you how to stay safe — in plain language.</p>
+  <h2 id="heroTitle">Got a suspicious message, call, or situation?</h2>
+  <p id="heroSub">Describe what happened and OGA_WATCHAFRI will detect the fraud, advise you on what to do, and teach you how to stay safe — in plain language.</p>
 </div>
 
-<div class="examples">
-  <div class="example-chip" onclick="useExample(this)">Someone sent me a WhatsApp message saying I won ₦500,000 and should send ₦5,000 to claim it</div>
-  <div class="example-chip" onclick="useExample(this)">MTN called me asking for my SIM serial number and NIN</div>
-  <div class="example-chip" onclick="useExample(this)">I got an SMS from GTBank saying my account will be blocked — click this link: gtb-verify.net</div>
-  <div class="example-chip" onclick="useExample(this)">Someone offered me a crypto investment with 300% returns in 7 days</div>
+<div class="lang-toggle">
+  <button class="lang-btn active" id="btn-en" onclick="setLang('english')">🇬🇧 English</button>
+  <button class="lang-btn" id="btn-ha" onclick="setLang('hausa')">🇳🇬 Hausa</button>
+</div>
+
+<div class="examples" id="examplesDiv">
+  <div class="example-chip en-chip" onclick="useExample(this)">Someone sent me a WhatsApp message saying I won ₦500,000 and should send ₦5,000 to claim it</div>
+  <div class="example-chip en-chip" onclick="useExample(this)">MTN called me asking for my SIM serial number and NIN</div>
+  <div class="example-chip en-chip" onclick="useExample(this)">I got an SMS from GTBank saying my account will be blocked — click this link: gtb-verify.net</div>
+  <div class="example-chip en-chip" onclick="useExample(this)">Someone offered me a crypto investment with 300% returns in 7 days</div>
+  <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">An aiko mun da saƙo a WhatsApp cewa mun lashe N500,000 amma dole mu biya N5,000 don karɓa</div>
+  <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">MTN sun kira ni suna neman lambar SIM card da NIN na</div>
+  <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">Na sami SMS daga GTBank cewa za a rufe asusuna — danna wannan hanyar</div>
+  <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">Wani ya ce zan samu riba mai yawa idan na zuba kuɗi a cikin crypto</div>
 </div>
 
 <div class="chat-container" id="chatContainer"></div>
@@ -148,77 +178,282 @@ pre{white-space:pre-wrap;word-wrap:break-word;font-family:'Space Grotesk',sans-s
 <div class="input-area">
   <div class="input-wrap">
     <textarea id="userInput" placeholder="Describe the suspicious message, call, or situation..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="mic-btn" id="micBtn" onclick="toggleVoice()" title="Speak your situation">🎤</button>
     <button class="send-btn" id="sendBtn" onclick="sendMessage()">&#10148;</button>
   </div>
   <div class="disclaimer">OGA_WATCHAFRI does not store your messages. Always contact authorities for serious cases.</div>
 </div>
 
 <script>
-function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
-function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
-function useExample(el){document.getElementById('userInput').value=el.textContent;sendMessage();}
-function addMessage(role,content){
-  const c=document.getElementById('chatContainer');
-  const d=document.createElement('div');
-  d.className=`message ${role}`;
-  const av=role==='user'?'👤':'🛡️';
-  const ac=role==='user'?'user':'bot';
-  d.innerHTML=`<div class="avatar ${ac}">${av}</div><div class="bubble">${content}</div>`;
+// ── STATE ────────────────────────────────────────────────────────────────────
+let selectedLang = null;
+let isListening = false;
+let recognition = null;
+let isSpeaking = false;
+let speechSynth = window.speechSynthesis;
+let msgCounter = 0;
+
+// ── LANGUAGE TOGGLE ──────────────────────────────────────────────────────────
+function setLang(lang) {
+  selectedLang = lang;
+  document.getElementById('btn-en').classList.toggle('active', lang === 'english');
+  document.getElementById('btn-ha').classList.toggle('active', lang === 'hausa');
+  document.querySelectorAll('.en-chip').forEach(el => el.style.display = lang === 'hausa' ? 'none' : '');
+  document.querySelectorAll('.ha-chip').forEach(el => el.style.display = lang === 'hausa' ? '' : 'none');
+  const input = document.getElementById('userInput');
+  const heroTitle = document.getElementById('heroTitle');
+  const heroSub = document.getElementById('heroSub');
+  if (lang === 'hausa') {
+    input.placeholder = 'Ka bayyana abin da ya faru...';
+    heroTitle.textContent = 'Kana da saƙo ko kira mai damuwa?';
+    heroSub.textContent = 'Ka bayyana abin da ya faru kuma OGA_WATCHAFRI zai gano zamba, ba da shawara, kuma ya koya maka yadda za ka kare kanka.';
+  } else {
+    input.placeholder = 'Describe the suspicious message, call, or situation...';
+    heroTitle.textContent = 'Got a suspicious message, call, or situation?';
+    heroSub.textContent = 'Describe what happened and OGA_WATCHAFRI will detect the fraud, advise you on what to do, and teach you how to stay safe — in plain language.';
+  }
+}
+
+// ── VOICE INPUT ──────────────────────────────────────────────────────────────
+function toggleVoice() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert('Voice input is not supported in your browser. Please use Chrome or Edge.');
+    return;
+  }
+  if (isListening) {
+    stopListening();
+  } else {
+    startListening();
+  }
+}
+
+function startListening() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.lang = selectedLang === 'hausa' ? 'ha-NG' : 'en-NG';
+
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('micBtn').classList.add('listening');
+    document.getElementById('micBtn').textContent = '🔴';
+    document.getElementById('userInput').placeholder = selectedLang === 'hausa' ? 'Ina sauraro...' : 'Listening...';
+  };
+
+  recognition.onresult = (event) => {
+    let transcript = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    document.getElementById('userInput').value = transcript;
+    autoResize(document.getElementById('userInput'));
+  };
+
+  recognition.onend = () => {
+    stopListening();
+    const text = document.getElementById('userInput').value.trim();
+    if (text) sendMessage();
+  };
+
+  recognition.onerror = (e) => {
+    stopListening();
+    console.error('Speech recognition error:', e.error);
+  };
+
+  recognition.start();
+}
+
+function stopListening() {
+  isListening = false;
+  if (recognition) recognition.stop();
+  const btn = document.getElementById('micBtn');
+  btn.classList.remove('listening');
+  btn.textContent = '🎤';
+  const lang = selectedLang === 'hausa';
+  document.getElementById('userInput').placeholder = lang ? 'Ka bayyana abin da ya faru...' : 'Describe the suspicious message, call, or situation...';
+}
+
+// ── VOICE OUTPUT ─────────────────────────────────────────────────────────────
+function speakText(text, lang, btnId) {
+  if (isSpeaking) {
+    speechSynth.cancel();
+    isSpeaking = false;
+    const btn = document.getElementById(btnId);
+    if (btn) { btn.classList.remove('speaking'); btn.textContent = '🔊 ' + (lang === 'hausa' ? 'Karanta' : 'Listen'); }
+    return;
+  }
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = lang === 'hausa' ? 'ha' : 'en-NG';
+  utterance.rate = 0.9;
+  utterance.pitch = 1.0;
+  isSpeaking = true;
+  const btn = document.getElementById(btnId);
+  if (btn) { btn.classList.add('speaking'); btn.textContent = '⏹️ ' + (lang === 'hausa' ? 'Tsaya' : 'Stop'); }
+  utterance.onend = () => {
+    isSpeaking = false;
+    if (btn) { btn.classList.remove('speaking'); btn.textContent = '🔊 ' + (lang === 'hausa' ? 'Karanta' : 'Listen'); }
+  };
+  speechSynth.speak(utterance);
+}
+
+// ── TRANSLATION ───────────────────────────────────────────────────────────────
+const LANG_OPTIONS = [
+  { code: 'yo', label: '🇳🇬 Yoruba', mm: 'yo' },
+  { code: 'ig', label: '🇳🇬 Igbo', mm: 'ig' },
+  { code: 'ha', label: '🇳🇬 Hausa', mm: 'ha' },
+  { code: 'en', label: '🇬🇧 English', mm: 'en' },
+  { code: 'fr', label: '🇫🇷 French', mm: 'fr' },
+  { code: 'ar', label: '🇸🇦 Arabic', mm: 'ar' },
+  { code: 'pcm', label: '🇳🇬 Pidgin', mm: 'pcm' },
+];
+
+async function translateText(text, targetLang, outputId) {
+  try {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0,500))}&langpair=en|${targetLang}`;
+    const r = await fetch(url);
+    const d = await r.json();
+    const translated = d.responseData?.translatedText || text;
+    const el = document.getElementById(outputId);
+    if (el) { el.textContent = translated; el.classList.add('visible'); }
+  } catch(e) {
+    const el = document.getElementById(outputId);
+    if (el) { el.textContent = 'Translation unavailable. Please try again.'; el.classList.add('visible'); }
+  }
+}
+
+function toggleTranslate(panelId) {
+  const panel = document.getElementById(panelId);
+  if (panel) panel.classList.toggle('visible');
+}
+
+function selectTranslation(langCode, langLabel, rawText, translatedId, panelId, btnId) {
+  document.querySelectorAll(`#${panelId} .lang-option`).forEach(el => el.classList.remove('selected'));
+  const btn = document.getElementById(btnId);
+  if (btn) btn.classList.add('selected');
+  translateText(rawText, langCode, translatedId);
+}
+
+// ── CHAT ──────────────────────────────────────────────────────────────────────
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function useExample(el) { document.getElementById('userInput').value = el.textContent; sendMessage(); }
+
+function addMessage(role, content) {
+  const c = document.getElementById('chatContainer');
+  const d = document.createElement('div');
+  d.className = `message ${role}`;
+  const av = role === 'user' ? '👤' : '🛡️';
+  const ac = role === 'user' ? 'user' : 'bot';
+  d.innerHTML = `<div class="avatar ${ac}">${av}</div><div class="bubble">${content}</div>`;
   c.appendChild(d);
-  d.scrollIntoView({behavior:'smooth',block:'end'});
+  d.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return d.querySelector('.bubble');
 }
-function showTyping(){
-  const c=document.getElementById('chatContainer');
-  const d=document.createElement('div');
-  d.className='message bot';d.id='typing-indicator';
-  d.innerHTML=`<div class="avatar bot">🛡️</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
-  c.appendChild(d);d.scrollIntoView({behavior:'smooth',block:'end'});
+
+function showTyping() {
+  const c = document.getElementById('chatContainer');
+  const d = document.createElement('div');
+  d.className = 'message bot'; d.id = 'typing-indicator';
+  d.innerHTML = `<div class="avatar bot">🛡️</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  c.appendChild(d);
+  d.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
-function removeTyping(){const el=document.getElementById('typing-indicator');if(el)el.remove();}
-function formatResponse(data){
-  const det=data.detection||{};
-  const sev=(det.severity||'medium').toLowerCase();
-  const fraudType=det.fraud_type||'Unknown';
-  const redFlags=(det.red_flags||[]).map(f=>`<div style="margin:3px 0;font-size:13px;">⚠️ ${f}</div>`).join('');
-  const reasoning=det.reasoning||'';
-  const advice=data.incident_advice||'';
-  const education=data.education||'';
+function removeTyping() { const el = document.getElementById('typing-indicator'); if (el) el.remove(); }
+
+function formatResponse(data, msgId) {
+  const det = data.detection || {};
+  const sev = (det.severity || 'medium').toLowerCase();
+  const fraudType = det.fraud_type || 'Unknown';
+  const redFlags = (det.red_flags || []).map(f => `<div style="margin:3px 0;font-size:13px;">⚠️ ${f}</div>`).join('');
+  const reasoning = det.reasoning || '';
+  const advice = data.incident_advice || '';
+  const education = data.education || '';
+  const lang = data.language || 'english';
+
+  // Full text for speech
+  const speechText = `${fraudType}. ${reasoning}. ${advice}`;
+  const panelId = `tp-${msgId}`;
+  const translatedId = `tr-${msgId}`;
+  const speakId = `sp-${msgId}`;
+
+  // Build language option buttons
+  const langButtons = LANG_OPTIONS
+    .filter(l => !(l.code === 'ha' && lang === 'hausa') && !(l.code === 'en' && lang === 'english'))
+    .map(l => `<div class="lang-option" id="lb-${msgId}-${l.code}" onclick="selectTranslation('${l.mm}','${l.label}',${JSON.stringify(advice + ' ' + education)},'${translatedId}','${panelId}','lb-${msgId}-${l.code}')">${l.label}</div>`)
+    .join('');
+
+  const n1Title = lang === 'hausa' ? '🔍 NODE 1 — GANO ZAMBA' : '🔍 Node 1 — Fraud Detector';
+  const n2Title = lang === 'hausa' ? '🚨 NODE 2 — SHAWARA' : '🚨 Node 2 — Incident Advisor';
+  const n3Title = lang === 'hausa' ? '🎓 NODE 3 — ILIMI' : '🎓 Node 3 — Awareness Educator';
+  const listenLabel = lang === 'hausa' ? '🔊 Karanta' : '🔊 Listen';
+  const translateLabel = lang === 'hausa' ? '🌍 Fassara' : '🌍 Translate';
+  const analysisLabel = lang === 'hausa' ? 'Bincike ya ƙare. Kare kanka!' : 'Analysis complete. Stay safe!';
+  const translateTitle = lang === 'hausa' ? 'Zaɓi harshe' : 'Translate to:';
+
   return `
-    <div style="font-weight:600;font-size:15px;margin-bottom:12px;">OGA_WATCHAFRI has analyzed your situation:</div>
+    <div style="font-weight:600;font-size:15px;margin-bottom:12px;">${lang === 'hausa' ? 'OGA_WATCHAFRI ya bincika yanayin ka:' : 'OGA_WATCHAFRI has analyzed your situation:'}</div>
+
     <div class="node-section node-detect">
-      <div class="node-title">🔍 Node 1 — Fraud Detector</div>
-      <div style="font-weight:600;font-size:14px;">${fraudType} <span class="badge ${sev}">${(det.severity||'').toUpperCase()}</span> <span class="badge" style="background:rgba(255,255,255,.1);color:var(--m)">${det.confidence||''} confidence</span></div>
-      ${redFlags?`<div style="margin-top:8px;">${redFlags}</div>`:''}
-      ${reasoning?`<div style="margin-top:8px;font-size:12px;color:var(--m);font-style:italic;">${reasoning}</div>`:''}
+      <div class="node-title">${n1Title}</div>
+      <div style="font-weight:600;font-size:14px;">${fraudType} <span class="badge ${sev}">${(det.severity || '').toUpperCase()}</span> <span class="badge" style="background:rgba(255,255,255,.1);color:var(--m)">${det.confidence || ''} confidence</span></div>
+      ${redFlags ? `<div style="margin-top:8px;">${redFlags}</div>` : ''}
+      ${reasoning ? `<div style="margin-top:8px;font-size:12px;color:var(--m);font-style:italic;">${reasoning}</div>` : ''}
     </div>
+
     <div class="node-section node-advise" style="margin-top:10px;">
-      <div class="node-title">🚨 Node 2 — Incident Advisor</div>
+      <div class="node-title">${n2Title}</div>
       <pre>${advice}</pre>
     </div>
+
     <div class="node-section node-educate" style="margin-top:10px;">
-      <div class="node-title">🎓 Node 3 — Awareness Educator</div>
+      <div class="node-title">${n3Title}</div>
       <pre>${education}</pre>
     </div>
+
+    <div class="response-actions">
+      <button class="action-btn" id="${speakId}" onclick="speakText(${JSON.stringify(speechText)},'${lang}','${speakId}')">${listenLabel}</button>
+      <button class="action-btn" onclick="toggleTranslate('${panelId}')">${translateLabel}</button>
+    </div>
+
+    <div class="translate-panel" id="${panelId}">
+      <h4>${translateTitle}</h4>
+      <div class="lang-grid">${langButtons}</div>
+      <div class="translated-text" id="${translatedId}"></div>
+    </div>
+
     <div style="margin-top:12px;font-size:12px;color:var(--m);text-align:center;font-family:'DM Mono',monospace;">
-      ✅ OGA_WATCHAFRI analysis complete. Stay safe, stay sharp! 💪🌍
+      ✅ ${analysisLabel} 💪🌍
     </div>`;
 }
-async function sendMessage(){
-  const input=document.getElementById('userInput');
-  const btn=document.getElementById('sendBtn');
-  const situation=input.value.trim();
-  if(!situation)return;
-  addMessage('user',situation);
-  input.value='';input.style.height='auto';
-  btn.disabled=true;showTyping();
-  try{
-    const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({situation})});
-    const data=await r.json();
+
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const btn = document.getElementById('sendBtn');
+  const situation = input.value.trim();
+  if (!situation) return;
+  addMessage('user', situation);
+  input.value = ''; input.style.height = 'auto';
+  btn.disabled = true; showTyping();
+  try {
+    const r = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ situation, language: selectedLang })
+    });
+    const data = await r.json();
     removeTyping();
-    if(data.error){addMessage('bot',`<span style="color:var(--r)">Error: ${data.error}</span>`);}
-    else{addMessage('bot',formatResponse(data));}
-  }catch(e){removeTyping();addMessage('bot',`<span style="color:var(--r)">Something went wrong. Please try again.</span>`);}
-  btn.disabled=false;
+    msgCounter++;
+    if (data.error) {
+      addMessage('bot', `<span style="color:var(--r)">Error: ${data.error}</span>`);
+    } else {
+      addMessage('bot', formatResponse(data, msgCounter));
+    }
+  } catch (e) {
+    removeTyping();
+    addMessage('bot', `<span style="color:var(--r)">Something went wrong. Please try again.</span>`);
+  }
+  btn.disabled = false;
 }
 </script>
 </body>
