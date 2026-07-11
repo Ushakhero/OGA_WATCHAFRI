@@ -1,7 +1,7 @@
 """
-OGA_WATCHAFRI — Flask Web App with Chat Interface
+OGA_WATCHAFRI - Flask Web App with Chat Interface
 The Boss That Watches Over Africa
-Voice Mode · Multi-Language · Hausa Support
+Voice Mode, Multi-Language, Hausa Support, Translation
 """
 
 from flask import Flask, jsonify, request
@@ -55,7 +55,7 @@ CHAT_UI = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OGA_WATCHAFRI — AI Fraud Defense for Africa</title>
+<title>OGA_WATCHAFRI -- AI Fraud Defense for Africa</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -110,13 +110,14 @@ header{padding:12px 24px;background:rgba(10,22,40,0.95);border-bottom:1px solid 
 .action-btn:hover{border-color:var(--gold);color:var(--gold);}
 .action-btn.speaking{border-color:var(--gr);color:var(--gr);}
 .translate-panel{margin-top:10px;background:var(--s2);border:1px solid var(--b);border-radius:10px;padding:12px;display:none;}
-.translate-panel.visible{display:block;}
+.translate-panel.open{display:block;}
 .translate-panel h4{font-size:11px;color:var(--m);margin-bottom:8px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px;}
 .lang-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
 .lang-option{background:var(--s);border:1px solid var(--b);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--m);cursor:pointer;transition:all .2s;}
-.lang-option:hover,.lang-option.selected{border-color:var(--gold);color:var(--gold);}
-.translated-text{font-size:13px;color:var(--t);line-height:1.6;margin-top:8px;padding-top:8px;border-top:1px solid var(--b);display:none;min-height:40px;}
-.translated-text.visible{display:block !important;}
+.lang-option:hover{border-color:var(--gold);color:var(--gold);}
+.lang-option.selected{border-color:var(--gold);color:var(--gold);background:rgba(201,150,26,.1);}
+.translated-output{margin-top:8px;padding:10px;background:var(--s);border-radius:8px;border:1px solid var(--b);font-size:13px;color:var(--t);line-height:1.6;min-height:48px;display:none;}
+.translated-output.show{display:block;}
 .input-area{position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--b);padding:12px 16px;margin-top:auto;}
 .input-wrap{max-width:800px;margin:0 auto;display:flex;gap:8px;align-items:flex-end;}
 textarea{flex:1;background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 16px;color:var(--t);font-family:'Space Grotesk',sans-serif;font-size:14px;resize:none;outline:none;min-height:48px;max-height:120px;transition:border-color .2s;line-height:1.5;}
@@ -139,29 +140,29 @@ pre{white-space:pre-wrap;word-wrap:break-word;font-family:'Space Grotesk',sans-s
   <img src="LOGO_PLACEHOLDER" alt="OGA_WATCHAFRI" class="logo-img" onerror="this.style.display='none'">
   <div class="logo-text">
     <h1>OGA_WATCHAFRI</h1>
-    <p>The Boss That Watches Over Africa · AI Fraud Defense</p>
+    <p>The Boss That Watches Over Africa - AI Fraud Defense</p>
   </div>
   <div class="pulse-dot"></div>
 </header>
 
 <div class="hero">
   <h2 id="heroTitle">Got a suspicious message, call, or situation?</h2>
-  <p id="heroSub">Describe what happened and OGA_WATCHAFRI will detect the fraud, advise you on what to do, and teach you how to stay safe — in plain language.</p>
+  <p id="heroSub">Describe what happened and OGA_WATCHAFRI will detect the fraud, advise you on what to do, and teach you how to stay safe in plain language.</p>
 </div>
 
 <div class="lang-toggle">
-  <button class="lang-btn active" id="btn-en" onclick="setLang('english')">&#127468;&#127463; English</button>
-  <button class="lang-btn" id="btn-ha" onclick="setLang('hausa')">&#127475;&#127468; Hausa</button>
+  <button class="lang-btn active" id="btn-en" onclick="setLang('english')">English</button>
+  <button class="lang-btn" id="btn-ha" onclick="setLang('hausa')">Hausa</button>
 </div>
 
 <div class="examples" id="examplesDiv">
   <div class="example-chip en-chip" onclick="useExample(this)">Someone sent me a WhatsApp message saying I won N500,000 and should send N5,000 to claim it</div>
   <div class="example-chip en-chip" onclick="useExample(this)">MTN called me asking for my SIM serial number and NIN</div>
-  <div class="example-chip en-chip" onclick="useExample(this)">I got an SMS from GTBank saying my account will be blocked — click this link: gtb-verify.net</div>
+  <div class="example-chip en-chip" onclick="useExample(this)">I got an SMS from GTBank saying my account will be blocked click this link gtb-verify.net</div>
   <div class="example-chip en-chip" onclick="useExample(this)">Someone offered me a crypto investment with 300% returns in 7 days</div>
   <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">An aiko mun da sako a WhatsApp cewa mun lashe N500,000 amma dole mu biya N5,000 don karba</div>
   <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">MTN sun kira ni suna neman lambar SIM card da NIN na</div>
-  <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">Na sami SMS daga GTBank cewa za a rufe asusuna — danna wannan hanyar</div>
+  <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">Na sami SMS daga GTBank cewa za a rufe asusuna danna wannan hanyar</div>
   <div class="example-chip ha-chip" style="display:none" onclick="useExample(this)">Wani ya ce zan samu riba mai yawa idan na zuba kudi a cikin crypto</div>
 </div>
 
@@ -177,247 +178,268 @@ pre{white-space:pre-wrap;word-wrap:break-word;font-family:'Space Grotesk',sans-s
 </div>
 
 <script>
-let selectedLang=null;
-let isListening=false;
-let recognition=null;
-let isSpeaking=false;
-let speechSynth=window.speechSynthesis;
-let msgCounter=0;
+var selectedLang = null;
+var isListening = false;
+var recognition = null;
+var isSpeaking = false;
+var msgCounter = 0;
 
-function setLang(lang){
-  selectedLang=lang;
-  document.getElementById('btn-en').classList.toggle('active',lang==='english');
-  document.getElementById('btn-ha').classList.toggle('active',lang==='hausa');
-  document.querySelectorAll('.en-chip').forEach(el=>el.style.display=lang==='hausa'?'none':'');
-  document.querySelectorAll('.ha-chip').forEach(el=>el.style.display=lang==='hausa'?'':'none');
-  const input=document.getElementById('userInput');
-  if(lang==='hausa'){
-    input.placeholder='Ka bayyana abin da ya faru...';
-    document.getElementById('heroTitle').textContent='Kana da sako ko kira mai damuwa?';
-    document.getElementById('heroSub').textContent='Ka bayyana abin da ya faru kuma OGA_WATCHAFRI zai gano zamba, ba da shawara, kuma ya koya maka yadda za ka kare kanka.';
+var TRANSLATE_LANGS = [
+  {code:'yo', label:'Yoruba'},
+  {code:'ig', label:'Igbo'},
+  {code:'ha', label:'Hausa'},
+  {code:'en', label:'English'},
+  {code:'fr', label:'French'},
+  {code:'ar', label:'Arabic'},
+  {code:'pt', label:'Pidgin (Portuguese)'}
+];
+
+function setLang(lang) {
+  selectedLang = lang;
+  document.getElementById('btn-en').className = 'lang-btn' + (lang === 'english' ? ' active' : '');
+  document.getElementById('btn-ha').className = 'lang-btn' + (lang === 'hausa' ? ' active' : '');
+  var enChips = document.querySelectorAll('.en-chip');
+  var haChips = document.querySelectorAll('.ha-chip');
+  for (var i = 0; i < enChips.length; i++) enChips[i].style.display = lang === 'hausa' ? 'none' : '';
+  for (var i = 0; i < haChips.length; i++) haChips[i].style.display = lang === 'hausa' ? '' : 'none';
+  var input = document.getElementById('userInput');
+  if (lang === 'hausa') {
+    input.placeholder = 'Ka bayyana abin da ya faru...';
+    document.getElementById('heroTitle').textContent = 'Kana da sako ko kira mai damuwa?';
+    document.getElementById('heroSub').textContent = 'Ka bayyana abin da ya faru kuma OGA_WATCHAFRI zai gano zamba, ba da shawara, kuma ya koya maka yadda za ka kare kanka.';
   } else {
-    input.placeholder='Describe the suspicious message, call, or situation...';
-    document.getElementById('heroTitle').textContent='Got a suspicious message, call, or situation?';
-    document.getElementById('heroSub').textContent='Describe what happened and OGA_WATCHAFRI will detect the fraud, advise you on what to do, and teach you how to stay safe — in plain language.';
+    input.placeholder = 'Describe the suspicious message, call, or situation...';
+    document.getElementById('heroTitle').textContent = 'Got a suspicious message, call, or situation?';
+    document.getElementById('heroSub').textContent = 'Describe what happened and OGA_WATCHAFRI will detect the fraud, advise you on what to do, and teach you how to stay safe in plain language.';
   }
 }
 
-function toggleVoice(){
-  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){
+function toggleVoice() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     alert('Voice input is not supported in your browser. Please use Chrome or Edge.');
     return;
   }
-  if(isListening){stopListening();}else{startListening();}
+  if (isListening) { stopListening(); } else { startListening(); }
 }
 
-function startListening(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  recognition=new SR();
-  recognition.continuous=false;
-  recognition.interimResults=true;
-  recognition.lang=selectedLang==='hausa'?'ha-NG':'en-NG';
-  recognition.onstart=()=>{
-    isListening=true;
-    document.getElementById('micBtn').classList.add('listening');
-    document.getElementById('micBtn').textContent='&#128308;';
-    document.getElementById('userInput').placeholder=selectedLang==='hausa'?'Ina sauraro...':'Listening...';
+function startListening() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.lang = selectedLang === 'hausa' ? 'ha-NG' : 'en-NG';
+  recognition.onstart = function() {
+    isListening = true;
+    document.getElementById('micBtn').className = 'mic-btn listening';
+    document.getElementById('micBtn').innerHTML = '&#128308;';
+    document.getElementById('userInput').placeholder = selectedLang === 'hausa' ? 'Ina sauraro...' : 'Listening...';
   };
-  recognition.onresult=(e)=>{
-    let t='';
-    for(let i=e.resultIndex;i<e.results.length;i++) t+=e.results[i][0].transcript;
-    document.getElementById('userInput').value=t;
+  recognition.onresult = function(e) {
+    var t = '';
+    for (var i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript;
+    document.getElementById('userInput').value = t;
     autoResize(document.getElementById('userInput'));
   };
-  recognition.onend=()=>{
+  recognition.onend = function() {
     stopListening();
-    const t=document.getElementById('userInput').value.trim();
-    if(t) sendMessage();
+    var t = document.getElementById('userInput').value.trim();
+    if (t) sendMessage();
   };
-  recognition.onerror=(e)=>{stopListening();console.error('Speech error:',e.error);};
+  recognition.onerror = function(e) { stopListening(); };
   recognition.start();
 }
 
-function stopListening(){
-  isListening=false;
-  if(recognition) recognition.stop();
-  const btn=document.getElementById('micBtn');
-  btn.classList.remove('listening');
-  btn.textContent='&#127908;';
-  document.getElementById('userInput').placeholder=selectedLang==='hausa'?'Ka bayyana abin da ya faru...':'Describe the suspicious message, call, or situation...';
+function stopListening() {
+  isListening = false;
+  if (recognition) recognition.stop();
+  var btn = document.getElementById('micBtn');
+  btn.className = 'mic-btn';
+  btn.innerHTML = '&#127908;';
+  document.getElementById('userInput').placeholder = selectedLang === 'hausa' ? 'Ka bayyana abin da ya faru...' : 'Describe the suspicious message, call, or situation...';
 }
 
-function speakText(text,lang,btnId){
-  if(isSpeaking){
-    speechSynth.cancel();isSpeaking=false;
-    const b=document.getElementById(btnId);
-    if(b){b.classList.remove('speaking');b.textContent=lang==='hausa'?'&#128266; Karanta':'&#128266; Listen';}
+function speakText(text, lang, btnId) {
+  if (isSpeaking) {
+    window.speechSynthesis.cancel();
+    isSpeaking = false;
+    var b = document.getElementById(btnId);
+    if (b) b.textContent = lang === 'hausa' ? 'Karanta' : 'Listen';
     return;
   }
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang=lang==='hausa'?'ha':'en-NG';
-  u.rate=0.9;u.pitch=1.0;
-  isSpeaking=true;
-  const b=document.getElementById(btnId);
-  if(b){b.classList.add('speaking');b.textContent=lang==='hausa'?'&#9209;&#65039; Tsaya':'&#9209;&#65039; Stop';}
-  u.onend=()=>{
-    isSpeaking=false;
-    if(b){b.classList.remove('speaking');b.textContent=lang==='hausa'?'&#128266; Karanta':'&#128266; Listen';}
+  var u = new SpeechSynthesisUtterance(text);
+  u.lang = lang === 'hausa' ? 'ha' : 'en-NG';
+  u.rate = 0.9;
+  isSpeaking = true;
+  var b = document.getElementById(btnId);
+  if (b) { b.className = 'action-btn speaking'; b.textContent = lang === 'hausa' ? 'Tsaya' : 'Stop'; }
+  u.onend = function() {
+    isSpeaking = false;
+    if (b) { b.className = 'action-btn'; b.textContent = lang === 'hausa' ? 'Karanta' : 'Listen'; }
   };
-  speechSynth.speak(u);
+  window.speechSynthesis.speak(u);
 }
 
-const LANGS=[
-  {code:'yo',label:'&#127475;&#127468; Yoruba',mm:'yo'},
-  {code:'ig',label:'&#127475;&#127468; Igbo',mm:'ig'},
-  {code:'ha',label:'&#127475;&#127468; Hausa',mm:'ha'},
-  {code:'en',label:'&#127468;&#127463; English',mm:'en'},
-  {code:'fr',label:'&#127467;&#127479; French',mm:'fr'},
-  {code:'ar',label:'&#127462;&#127466; Arabic',mm:'ar'},
-  {code:'pcm',label:'&#127475;&#127468; Pidgin',mm:'en-NG'},
-];
-
-async function translateText(text,targetLang,outputId){
-  const el=document.getElementById(outputId);
-  if(!el) return;
-  el.textContent='Translating...';
-  el.classList.add('visible');
-  el.style.color='var(--m)';
-  try{
-    // Clean text — remove markdown symbols before translating
-    const clean=text.replace(/\*\*/g,'').replace(/##/g,'').replace(/\n+/g,' ').trim();
-    const url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean.substring(0,450))}&langpair=en|${targetLang}`;
-    const r=await fetch(url);
-    const d=await r.json();
-    if(d.responseStatus===200){
-      el.textContent=d.responseData.translatedText;
-      el.style.color='var(--t)';
-    } else {
-      el.textContent='Translation limit reached. Please try again in a moment.';
-      el.style.color='var(--r)';
-    }
-  }catch(e){
-    el.textContent='Translation unavailable. Check your connection and try again.';
-    el.style.color='var(--r)';
+function toggleTranslatePanel(panelId) {
+  var p = document.getElementById(panelId);
+  if (!p) return;
+  if (p.className.indexOf('open') >= 0) {
+    p.className = p.className.replace(' open', '').replace('open', '').trim();
+  } else {
+    p.className += ' open';
   }
 }
 
-function toggleTranslate(panelId){
-  const p=document.getElementById(panelId);
-  if(p) p.classList.toggle('visible');
+function doTranslate(langCode, rawText, outputId, btnId, panelId) {
+  // Mark selected button
+  var panel = document.getElementById(panelId);
+  if (panel) {
+    var btns = panel.querySelectorAll('.lang-option');
+    for (var i = 0; i < btns.length; i++) btns[i].className = 'lang-option';
+  }
+  var selBtn = document.getElementById(btnId);
+  if (selBtn) selBtn.className = 'lang-option selected';
+
+  // Show output with loading message
+  var out = document.getElementById(outputId);
+  if (!out) return;
+  out.textContent = 'Translating...';
+  out.style.color = 'var(--m)';
+  out.className = 'translated-output show';
+
+  // Clean the text before sending
+  var clean = rawText.replace(/\*\*/g, '').replace(/##/g, '').replace(/\n/g, ' ').trim();
+  if (clean.length > 450) clean = clean.substring(0, 450);
+
+  var url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(clean) + '&langpair=en|' + langCode;
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.responseStatus === 200 && d.responseData && d.responseData.translatedText) {
+        out.textContent = d.responseData.translatedText;
+        out.style.color = 'var(--t)';
+      } else {
+        out.textContent = 'Translation limit reached. Try again in a moment.';
+        out.style.color = 'var(--r)';
+      }
+    })
+    .catch(function() {
+      out.textContent = 'Translation unavailable. Please check your connection.';
+      out.style.color = 'var(--r)';
+    });
 }
 
-function selectTranslation(langCode,rawText,translatedId,panelId,btnId){
-  document.querySelectorAll(`#${panelId} .lang-option`).forEach(el=>el.classList.remove('selected'));
-  const b=document.getElementById(btnId);
-  if(b) b.classList.add('selected');
-  translateText(rawText,langCode,translatedId);
-}
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function useExample(el) { document.getElementById('userInput').value = el.textContent; sendMessage(); }
 
-function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
-function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
-function useExample(el){document.getElementById('userInput').value=el.textContent;sendMessage();}
-
-function addMessage(role,content){
-  const c=document.getElementById('chatContainer');
-  const d=document.createElement('div');
-  d.className=`message ${role}`;
-  const av=role==='user'?'&#128100;':'&#128737;&#65039;';
-  const ac=role==='user'?'user':'bot';
-  d.innerHTML=`<div class="avatar ${ac}">${av}</div><div class="bubble">${content}</div>`;
+function addMessage(role, content) {
+  var c = document.getElementById('chatContainer');
+  var d = document.createElement('div');
+  d.className = 'message ' + role;
+  var av = role === 'user' ? '&#128100;' : '&#128737;';
+  d.innerHTML = '<div class="avatar ' + (role === 'user' ? 'user' : 'bot') + '">' + av + '</div><div class="bubble">' + content + '</div>';
   c.appendChild(d);
-  d.scrollIntoView({behavior:'smooth',block:'end'});
+  d.scrollIntoView({behavior: 'smooth', block: 'end'});
   return d.querySelector('.bubble');
 }
 
-function showTyping(){
-  const c=document.getElementById('chatContainer');
-  const d=document.createElement('div');
-  d.className='message bot';d.id='typing-indicator';
-  d.innerHTML=`<div class="avatar bot">&#128737;&#65039;</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
-  c.appendChild(d);d.scrollIntoView({behavior:'smooth',block:'end'});
+function showTyping() {
+  var c = document.getElementById('chatContainer');
+  var d = document.createElement('div');
+  d.className = 'message bot'; d.id = 'typing-indicator';
+  d.innerHTML = '<div class="avatar bot">&#128737;</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>';
+  c.appendChild(d);
+  d.scrollIntoView({behavior: 'smooth', block: 'end'});
 }
-function removeTyping(){const el=document.getElementById('typing-indicator');if(el)el.remove();}
+function removeTyping() { var el = document.getElementById('typing-indicator'); if (el) el.remove(); }
 
-function formatResponse(data,msgId){
-  const det=data.detection||{};
-  const sev=(det.severity||'medium').toLowerCase();
-  const fraudType=det.fraud_type||'Unknown';
-  const redFlags=(det.red_flags||[]).map(f=>`<div style="margin:3px 0;font-size:13px;">&#9888;&#65039; ${f}</div>`).join('');
-  const reasoning=det.reasoning||'';
-  const advice=data.incident_advice||'';
-  const education=data.education||'';
-  const lang=data.language||'english';
-  const speechText=`${fraudType}. ${reasoning}. ${advice}`;
-  const panelId=`tp-${msgId}`;
-  const translatedId=`tr-${msgId}`;
-  const speakId=`sp-${msgId}`;
-  const rawForTranslation=advice+' '+education;
+function formatResponse(data, msgId) {
+  var det = data.detection || {};
+  var sev = (det.severity || 'medium').toLowerCase();
+  var fraudType = det.fraud_type || 'Unknown';
+  var redFlags = (det.red_flags || []).map(function(f) { return '<div style="margin:3px 0;font-size:13px;">&#9888; ' + f + '</div>'; }).join('');
+  var reasoning = det.reasoning || '';
+  var advice = data.incident_advice || '';
+  var education = data.education || '';
+  var lang = data.language || 'english';
+  var speechText = fraudType + '. ' + reasoning + '. ' + advice;
+  var panelId = 'tp-' + msgId;
+  var outputId = 'to-' + msgId;
+  var speakId = 'sp-' + msgId;
+  var rawForTranslation = advice + ' ' + education;
 
-  const langButtons=LANGS
-    .filter(l=>!(l.code==='ha'&&lang==='hausa')&&!(l.code==='en'&&lang==='english'))
-    .map(l=>`<div class="lang-option" id="lb-${msgId}-${l.code}" onclick="selectTranslation('${l.mm}',${JSON.stringify(rawForTranslation)},'${translatedId}','${panelId}','lb-${msgId}-${l.code}')">${l.label}</div>`)
-    .join('');
+  var langBtns = TRANSLATE_LANGS
+    .filter(function(l) { return !(l.code === 'ha' && lang === 'hausa') && !(l.code === 'en' && lang === 'english'); })
+    .map(function(l) {
+      var btnId = 'lb-' + msgId + '-' + l.code;
+      return '<div class="lang-option" id="' + btnId + '" onclick="doTranslate(\'' + l.code + '\',' + JSON.stringify(rawForTranslation) + ',\'' + outputId + '\',\'' + btnId + '\',\'' + panelId + '\')">' + l.label + '</div>';
+    }).join('');
 
-  const n1=lang==='hausa'?'&#128269; NODE 1 &#8212; GANO ZAMBA':'&#128269; Node 1 &#8212; Fraud Detector';
-  const n2=lang==='hausa'?'&#128680; NODE 2 &#8212; SHAWARA':'&#128680; Node 2 &#8212; Incident Advisor';
-  const n3=lang==='hausa'?'&#127891; NODE 3 &#8212; ILIMI':'&#127891; Node 3 &#8212; Awareness Educator';
-  const listenLbl=lang==='hausa'?'&#128266; Karanta':'&#128266; Listen';
-  const transLbl=lang==='hausa'?'&#127758; Fassara':'&#127758; Translate';
-  const transTitle=lang==='hausa'?'Zabi harshe:':'Translate to:';
-  const doneLbl=lang==='hausa'?'Bincike ya kare. Kare kanka! &#128170;&#127758;':'Analysis complete. Stay safe! &#128170;&#127758;';
+  var n1 = lang === 'hausa' ? 'NODE 1 - GANO ZAMBA' : 'Node 1 - Fraud Detector';
+  var n2 = lang === 'hausa' ? 'NODE 2 - SHAWARA' : 'Node 2 - Incident Advisor';
+  var n3 = lang === 'hausa' ? 'NODE 3 - ILIMI' : 'Node 3 - Awareness Educator';
+  var listenLbl = lang === 'hausa' ? 'Karanta' : 'Listen';
+  var transLbl = lang === 'hausa' ? 'Fassara' : 'Translate';
+  var transTitle = lang === 'hausa' ? 'Zabi harshe:' : 'Translate to:';
+  var doneLbl = lang === 'hausa' ? 'Bincike ya kare. Kare kanka!' : 'Analysis complete. Stay safe!';
 
-  return `
-    <div style="font-weight:600;font-size:15px;margin-bottom:12px;">${lang==='hausa'?'OGA_WATCHAFRI ya bincika yanayin ka:':'OGA_WATCHAFRI has analyzed your situation:'}</div>
-    <div class="node-section node-detect">
-      <div class="node-title">${n1}</div>
-      <div style="font-weight:600;font-size:14px;">${fraudType} <span class="badge ${sev}">${(det.severity||'').toUpperCase()}</span> <span class="badge" style="background:rgba(255,255,255,.1);color:var(--m)">${det.confidence||''} confidence</span></div>
-      ${redFlags?`<div style="margin-top:8px;">${redFlags}</div>`:''}
-      ${reasoning?`<div style="margin-top:8px;font-size:12px;color:var(--m);font-style:italic;">${reasoning}</div>`:''}
-    </div>
-    <div class="node-section node-advise" style="margin-top:10px;">
-      <div class="node-title">${n2}</div>
-      <pre>${advice}</pre>
-    </div>
-    <div class="node-section node-educate" style="margin-top:10px;">
-      <div class="node-title">${n3}</div>
-      <pre>${education}</pre>
-    </div>
-    <div class="response-actions">
-      <button class="action-btn" id="${speakId}" onclick="speakText(${JSON.stringify(speechText)},'${lang}','${speakId}')">${listenLbl}</button>
-      <button class="action-btn" onclick="toggleTranslate('${panelId}')">${transLbl}</button>
-    </div>
-    <div class="translate-panel" id="${panelId}">
-      <h4>${transTitle}</h4>
-      <div class="lang-grid">${langButtons}</div>
-      <div class="translated-text" id="${translatedId}"></div>
-    </div>
-    <div style="margin-top:12px;font-size:12px;color:var(--m);text-align:center;font-family:'DM Mono',monospace;">&#9989; ${doneLbl}</div>`;
+  return '<div style="font-weight:600;font-size:15px;margin-bottom:12px;">' + (lang === 'hausa' ? 'OGA_WATCHAFRI ya bincika yanayin ka:' : 'OGA_WATCHAFRI has analyzed your situation:') + '</div>'
+    + '<div class="node-section node-detect">'
+    + '<div class="node-title">&#128269; ' + n1 + '</div>'
+    + '<div style="font-weight:600;font-size:14px;">' + fraudType + ' <span class="badge ' + sev + '">' + (det.severity || '').toUpperCase() + '</span> <span class="badge" style="background:rgba(255,255,255,.1);color:var(--m)">' + (det.confidence || '') + ' confidence</span></div>'
+    + (redFlags ? '<div style="margin-top:8px;">' + redFlags + '</div>' : '')
+    + (reasoning ? '<div style="margin-top:8px;font-size:12px;color:var(--m);font-style:italic;">' + reasoning + '</div>' : '')
+    + '</div>'
+    + '<div class="node-section node-advise" style="margin-top:10px;">'
+    + '<div class="node-title">&#128680; ' + n2 + '</div>'
+    + '<pre>' + advice + '</pre>'
+    + '</div>'
+    + '<div class="node-section node-educate" style="margin-top:10px;">'
+    + '<div class="node-title">&#127891; ' + n3 + '</div>'
+    + '<pre>' + education + '</pre>'
+    + '</div>'
+    + '<div class="response-actions">'
+    + '<button class="action-btn" id="' + speakId + '" onclick="speakText(' + JSON.stringify(speechText) + ',\'' + lang + '\',\'' + speakId + '\')">&#128266; ' + listenLbl + '</button>'
+    + '<button class="action-btn" onclick="toggleTranslatePanel(\'' + panelId + '\')">&#127758; ' + transLbl + '</button>'
+    + '</div>'
+    + '<div class="translate-panel" id="' + panelId + '">'
+    + '<h4>' + transTitle + '</h4>'
+    + '<div class="lang-grid">' + langBtns + '</div>'
+    + '<div class="translated-output" id="' + outputId + '"></div>'
+    + '</div>'
+    + '<div style="margin-top:12px;font-size:12px;color:var(--m);text-align:center;font-family:DM Mono,monospace;">&#9989; ' + doneLbl + ' &#127758;</div>';
 }
 
-async function sendMessage(){
-  const input=document.getElementById('userInput');
-  const btn=document.getElementById('sendBtn');
-  const situation=input.value.trim();
-  if(!situation) return;
-  addMessage('user',situation);
-  input.value='';input.style.height='auto';
-  btn.disabled=true;showTyping();
-  try{
-    const r=await fetch('/api/analyze',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({situation,language:selectedLang})
-    });
-    const data=await r.json();
+function sendMessage() {
+  var input = document.getElementById('userInput');
+  var btn = document.getElementById('sendBtn');
+  var situation = input.value.trim();
+  if (!situation) return;
+  addMessage('user', situation);
+  input.value = ''; input.style.height = 'auto';
+  btn.disabled = true; showTyping();
+  fetch('/api/analyze', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({situation: situation, language: selectedLang})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
     removeTyping();
     msgCounter++;
-    if(data.error){addMessage('bot',`<span style="color:var(--r)">Error: ${data.error}</span>`);}
-    else{addMessage('bot',formatResponse(data,msgCounter));}
-  }catch(e){
+    if (data.error) {
+      addMessage('bot', '<span style="color:var(--r)">Error: ' + data.error + '</span>');
+    } else {
+      addMessage('bot', formatResponse(data, msgCounter));
+    }
+    btn.disabled = false;
+  })
+  .catch(function() {
     removeTyping();
-    addMessage('bot',`<span style="color:var(--r)">Something went wrong. Please try again.</span>`);
-  }
-  btn.disabled=false;
+    addMessage('bot', '<span style="color:var(--r)">Something went wrong. Please try again.</span>');
+    btn.disabled = false;
+  });
 }
 </script>
 </body>
@@ -431,7 +453,11 @@ def index():
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({'status': 'OGA_WATCHAFRI is live', 'version': '2.0', 'features': ['voice-input', 'voice-output', 'hausa', 'multi-language-translation']})
+    return jsonify({
+        'status': 'OGA_WATCHAFRI is live',
+        'version': '2.0',
+        'features': ['voice-input', 'voice-output', 'hausa', 'translation']
+    })
 
 @app.route('/api/analyze', methods=['POST'])
 @limiter.limit("5 per minute")
