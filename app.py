@@ -307,7 +307,7 @@ function doTranslate(langCode, rawText, outputId, btnId, panelId) {
   out.className = 'translated-output show';
 
   // Clean the text before sending
-  var clean = rawText.replace(/\*\*/g, '').replace(/##/g, '').replace(/\n/g, ' ').trim();
+  var clean = rawText.replace(/[*][*]/g, "").replace(/[#][#]/g, "").replace(/\n/g, " ").trim();
   if (clean.length > 450) clean = clean.substring(0, 450);
 
   var url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(clean) + '&langpair=en|' + langCode;
