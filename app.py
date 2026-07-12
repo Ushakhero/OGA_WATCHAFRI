@@ -289,6 +289,16 @@ function toggleTranslatePanel(panelId) {
   }
 }
 
+function handleTranslate(el) {
+  var langCode = el.getAttribute('data-lang');
+  var encodedText = el.getAttribute('data-text');
+  var outputId = el.getAttribute('data-output');
+  var panelId = el.getAttribute('data-panel');
+  var btnId = el.getAttribute('data-btn');
+  var rawText = decodeURIComponent(escape(atob(encodedText)));
+  doTranslate(langCode, rawText, outputId, btnId, panelId);
+}
+
 function doTranslate(langCode, rawText, outputId, btnId, panelId) {
   // Mark selected button
   var panel = document.getElementById(panelId);
@@ -373,13 +383,14 @@ function formatResponse(data, msgId) {
   window._translateCache = window._translateCache || {};
   window._translateCache[msgId] = rawForTranslation;
 
-  var langBtns = TRANSLATE_LANGS
-    .filter(function(l) { return !(l.code === 'ha' && lang === 'hausa') && !(l.code === 'en' && lang === 'english'); })
-    .map(function(l) {
-      var btnId = 'lb-' + msgId + '-' + l.code;
-      return '<div class="lang-option" id="' + btnId + '" onclick="doTranslate(\'' + l.code + '\',window._translateCache[\'' + msgId + '\'],\'' + outputId + '\',\'' + btnId + '\',\'' + panelId + '\')">' + l.label + '</div>';
-    }).join('');
-    
+  var encodedText = btoa(unescape(encodeURIComponent(rawForTranslation.substring(0, 450))));
+var langBtns = TRANSLATE_LANGS
+  .filter(function(l) { return !(l.code === 'ha' && lang === 'hausa') && !(l.code === 'en' && lang === 'english'); })
+  .map(function(l) {
+    var btnId = 'lb-' + msgId + '-' + l.code;
+    return '<div class="lang-option" id="' + btnId + '" data-lang="' + l.code + '" data-text="' + encodedText + '" data-output="' + outputId + '" data-panel="' + panelId + '" data-btn="' + btnId + '" onclick="handleTranslate(this)">' + l.label + '</div>';
+  }).join('');
+  
   var n1 = lang === 'hausa' ? 'NODE 1 - GANO ZAMBA' : 'Node 1 - Fraud Detector';
   var n2 = lang === 'hausa' ? 'NODE 2 - SHAWARA' : 'Node 2 - Incident Advisor';
   var n3 = lang === 'hausa' ? 'NODE 3 - ILIMI' : 'Node 3 - Awareness Educator';
