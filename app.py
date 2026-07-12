@@ -369,13 +369,17 @@ function formatResponse(data, msgId) {
   var speakId = 'sp-' + msgId;
   var rawForTranslation = advice + ' ' + education;
 
+  // Store translation text safely in global object - avoids special character issues in onclick
+  window._translateCache = window._translateCache || {};
+  window._translateCache[msgId] = rawForTranslation;
+
   var langBtns = TRANSLATE_LANGS
     .filter(function(l) { return !(l.code === 'ha' && lang === 'hausa') && !(l.code === 'en' && lang === 'english'); })
     .map(function(l) {
       var btnId = 'lb-' + msgId + '-' + l.code;
-      return '<div class="lang-option" id="' + btnId + '" onclick="doTranslate(\'' + l.code + '\',' + JSON.stringify(rawForTranslation) + ',\'' + outputId + '\',\'' + btnId + '\',\'' + panelId + '\')">' + l.label + '</div>';
+      return '<div class="lang-option" id="' + btnId + '" onclick="doTranslate(\'' + l.code + '\',window._translateCache[\'' + msgId + '\'],\'' + outputId + '\',\'' + btnId + '\',\'' + panelId + '\')">' + l.label + '</div>';
     }).join('');
-
+    
   var n1 = lang === 'hausa' ? 'NODE 1 - GANO ZAMBA' : 'Node 1 - Fraud Detector';
   var n2 = lang === 'hausa' ? 'NODE 2 - SHAWARA' : 'Node 2 - Incident Advisor';
   var n3 = lang === 'hausa' ? 'NODE 3 - ILIMI' : 'Node 3 - Awareness Educator';
