@@ -1,203 +1,245 @@
 """
-OGA_WATCHAFRI — Main Agent Runner
+OGA_WATCHAFRI - 3-Node AI Reasoning Agent
 The Boss That Watches Over Africa
-
-Multi-step reasoning agent for African cyber fraud detection,
-victim advising, and community education.
-
-Built for Microsoft Agents League Hackathon 2026
-Track: Reasoning Agents | Tool: Azure AI Foundry
+Supports English, Nigerian Pidgin, and Hausa
 """
 
 import os
 import json
-from openai import AzureOpenAI
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# ── Azure AI Foundry Configuration ──────────────────────────────────────────
-client = AzureOpenAI(
-    azure_endpoint=os.getenv("AZURE_AI_ENDPOINT"),
-    api_key=os.getenv("AZURE_AI_KEY"),
-    api_version="2024-02-01"
+client = OpenAI(
+    base_url=os.environ.get("AZURE_AI_ENDPOINT"),
+    api_key=os.environ.get("AZURE_AI_KEY"),
 )
+MODEL = os.environ.get("AZURE_DEPLOYMENT_NAME", "gpt-4o-mini")
 
-DEPLOYMENT = os.getenv("AZURE_DEPLOYMENT_NAME", "gpt-4o-mini")
+# Hausa word list for language detection
+HAUSA_WORDS = [
+    'ina', 'kai', 'suna', 'wanda', 'don', 'da', 'ba', 'ne', 'ce',
+    'kudi', 'banki', 'waya', 'sms', 'aiki', 'gida', 'yau', 'jiya',
+    'mace', 'namiji', 'allah', 'riba', 'zamba', 'laifi', 'sun',
+    'aka', 'ana', 'mai', 'yan', 'abu', 'kuma', 'amma', 'saboda',
+    'lokaci', 'mutum', 'arewa', 'kudin', 'aikawa', 'karba', 'sako',
+    'wani', 'neman', 'cewa', 'lashe', 'biya', 'danna', 'rufe',
+    'asusuna', 'hanyar', 'zuba', 'cikin', 'crypto', 'yawa'
+]
 
-# ── Load Prompt Templates ────────────────────────────────────────────────────
-def load_prompt(filename: str) -> str:
-    path = os.path.join("prompt-flow", filename)
-    with open(path, "r") as f:
-        content = f.read()
-    # Extract system and user sections
-    return content
 
-def call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.3, max_tokens: int = 700) -> str:
-    """Call Azure OpenAI with system + user prompt."""
+def detect_language(text):
+    """
+    Detect if the user is writing in Hausa.
+    Returns 'hausa' or 'english'.
+    """
+    words = text.lower().split()
+    if not words:
+        return 'english'
+    hausa_count = sum(1 for w in words if w in HAUSA_WORDS)
+    if hausa_count >= 2 or (hausa_count / len(words)) > 0.15:
+        return 'hausa'
+    return 'english'
+
+
+def node1_fraud_detector(situation, language='english'):
+    """Node 1 - Detect the fraud type and severity."""
+
+    if language == 'hausa':
+        system_prompt = """Kai kwararre ne wajen gano zamba a Najeriya da Afirka.
+
+Dole ka gano irin zamba, matakin hadari, da dalilan da suka sa kake tunanin haka.
+
+Ka amsa a cikin wannan tsari na JSON kawai - ba ka rubuta komai a wajen JSON ba:
+{
+  "fraud_type": "Irin zamba da aka gano",
+  "severity": "CRITICAL ko HIGH ko MEDIUM ko LOW",
+  "confidence": "HIGH ko MEDIUM ko LOW",
+  "red_flags": ["alamar hadari 1", "alamar hadari 2"],
+  "reasoning": "Takaitaccen bayani a Hausa"
+}"""
+    else:
+        system_prompt = """You are an expert fraud detection agent specializing in Nigerian and African fraud patterns.
+
+Analyze the situation and identify: fraud type, severity level, confidence, red flags, and reasoning.
+
+Respond ONLY in this exact JSON format - no text outside the JSON:
+{
+  "fraud_type": "Type of fraud detected",
+  "severity": "CRITICAL or HIGH or MEDIUM or LOW",
+  "confidence": "HIGH or MEDIUM or LOW",
+  "red_flags": ["flag 1", "flag 2", "flag 3"],
+  "reasoning": "Brief explanation of why this is fraud"
+}
+
+Common Nigerian fraud patterns: 419 advance fee scams, SIM swap attacks, BVN identity fraud,
+phishing via SMS or WhatsApp, fake investment schemes, POS skimming, romance scams,
+fake CBN or bank alerts, crypto investment fraud, OPay or PalmPay reversal fraud, ATM card swap."""
+
     response = client.chat.completions.create(
-        model=DEPLOYMENT,
+        model=MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
+            {"role": "user", "content": "Analyze this situation:\n\n" + situation}
         ],
-        temperature=temperature,
-        max_tokens=max_tokens
+        max_tokens=600,
+        temperature=0.3,
     )
-    return response.choices[0].message.content
 
-# ── Node 1: Fraud Detector ───────────────────────────────────────────────────
-def node1_fraud_detector(user_input: str) -> dict:
-    print("\n🔍 OGA_WATCHAFRI is analyzing your situation...\n")
-
-    system_prompt = """You are OGA_WATCHAFRI's Fraud Detection Engine — a cybersecurity expert 
-specializing in African digital fraud patterns including Nigerian 419 scams, 
-mobile money fraud, SIM swap attacks on African telecoms, phishing targeting 
-African banks, fake investment schemes, romance scams, fake job offers, 
-WhatsApp/SMS impersonation, and social engineering via phone calls.
-
-Analyze the user's input step-by-step and respond ONLY in this exact JSON format:
-{
-  "fraud_type": "Name of fraud type or No fraud detected",
-  "fraud_category": "phishing|advance_fee|sim_swap|fake_investment|romance_scam|fake_job|mobile_money_fraud|impersonation|unknown|none",
-  "red_flags": ["red flag 1", "red flag 2", "red flag 3"],
-  "confidence": "HIGH|MEDIUM|LOW",
-  "is_fraud": true or false,
-  "severity": "CRITICAL|HIGH|MEDIUM|LOW",
-  "reasoning": "Brief step-by-step analysis"
-}"""
-
-    user_prompt = f"Analyze this situation for cyber fraud:\n\n{user_input}"
-
-    raw = call_llm(system_prompt, user_prompt, temperature=0.2, max_tokens=600)
+    text = response.choices[0].message.content.strip()
+    text = text.replace("```json", "").replace("```", "").strip()
 
     try:
-        # Strip markdown code fences if present
-        clean = raw.replace("```json", "").replace("```", "").strip()
-        result = json.loads(clean)
-    except json.JSONDecodeError:
-        result = {"raw_output": raw, "is_fraud": True, "confidence": "MEDIUM"}
+        return json.loads(text)
+    except Exception:
+        return {
+            "fraud_type": "Zamba" if language == 'hausa' else "Suspicious Activity",
+            "severity": "HIGH",
+            "confidence": "MEDIUM",
+            "red_flags": ["Ba a iya tabbatarwa" if language == 'hausa' else "Could not parse details"],
+            "reasoning": text
+        }
 
-    return result
 
-# ── Node 2: Incident Advisor ─────────────────────────────────────────────────
-def node2_incident_advisor(user_input: str, fraud_analysis: dict) -> str:
-    print("🚨 Generating incident response guidance...\n")
+def node2_incident_advisor(situation, fraud_analysis, language='english'):
+    """Node 2 - Give immediate recovery steps with real contacts."""
 
-    system_prompt = """You are OGA_WATCHAFRI's Incident Response Advisor — helping African fraud 
-victims respond immediately and correctly.
+    fraud_type = fraud_analysis.get('fraud_type', 'fraud')
+    severity = fraud_analysis.get('severity', 'HIGH')
 
-Key African reporting contacts you know:
-- EFCC Nigeria: efccnigeria.org | 0800-326-5374
-- CBN Consumer Protection: 0800-225-5226  
-- NCC Nigeria: 622 (any network)
-- Nigeria Cybercrime reporting: report.cybercrime.gov.ng
-- GTBank Fraud: 0700-4826-2657 | Access Bank: 01-2712005
-- MTN Nigeria: 180 | Airtel: 121 | Glo: 121
-- Ghana Police Cybercrime: 18555
-- Safaricom M-Pesa Fraud: 0722-000-100
+    if language == 'hausa':
+        system_prompt = """Kai mai ba da shawara ne ga wadanda suka fada wa masu zamba a Najeriya.
 
-Give immediate, practical, step-by-step advice. Be empathetic. Use simple language.
-Format with clear headers and numbered steps."""
+An gano: """ + fraud_type + """ | Matakin hadari: """ + severity + """
 
-    user_prompt = f"""Original situation:
-{user_input}
+Ka ba da matakan gaggawa da za su taimaka wajen dawo da kudi ko hana karin asara.
+Ka ambaci lambobin waya na gaske:
+- EFCC: 0800-326-5252
+- CBN: 0700-225-5226
+- Yan sanda ta Intanet: 08057750448
+- MTN: 180 (don yanke SIM)
+- Airtel: 121
+- GTBank: 0700-482-6328
+- Access Bank: 1-800-000-2348
+- Zenith Bank: 0700-350-8000
 
-Fraud analysis:
-{json.dumps(fraud_analysis, indent=2)}
-
-Provide immediate incident response guidance:"""
-
-    return call_llm(system_prompt, user_prompt, temperature=0.3, max_tokens=700)
-
-# ── Node 3: Awareness Educator ───────────────────────────────────────────────
-def node3_awareness_educator(user_input: str, fraud_analysis: dict, incident_advice: str) -> str:
-    print("🎓 Preparing your awareness education...\n")
-
-    system_prompt = """You are OGA_WATCHAFRI's Awareness Educator — teaching everyday Africans 
-about cyber fraud in warm, simple, relatable language. You use mild Pidgin phrases 
-where natural (e.g., "E don do!", "No fall for am"), reference everyday African life, 
-and make tips easy to share with family WhatsApp groups.
-
-Structure response with these sections:
-## 🎓 What Just Happened To You
-## 🌍 How This Works in Africa  
-## 🛡️ 3 Simple Rules To Never Fall For This Again
-## 📢 Share This Warning (short shareable message)
-## 💪 Final Words
-
-Keep total under 400 words. Be warm, African, and real."""
-
-    user_prompt = f"""Situation faced: {user_input}
-Detection result: {fraud_analysis.get('fraud_type', 'Suspicious activity')}
-Advice given: {incident_advice[:200]}...
-
-Now educate and empower the user:"""
-
-    return call_llm(system_prompt, user_prompt, temperature=0.4, max_tokens=500)
-
-# ── Main Agent Orchestrator ──────────────────────────────────────────────────
-def run_oga_watchafri(user_input: str) -> None:
-    print("=" * 60)
-    print("🛡️  OGA_WATCHAFRI — The Boss That Watches Over Africa")
-    print("=" * 60)
-    print(f"\n📝 Your report: {user_input}\n")
-    print("-" * 60)
-
-    # Node 1: Detect
-    fraud_analysis = node1_fraud_detector(user_input)
-
-    if isinstance(fraud_analysis, dict) and not fraud_analysis.get("raw_output"):
-        severity = fraud_analysis.get("severity", "UNKNOWN")
-        fraud_type = fraud_analysis.get("fraud_type", "Unknown")
-        confidence = fraud_analysis.get("confidence", "UNKNOWN")
-        is_fraud = fraud_analysis.get("is_fraud", False)
-
-        emoji = "🔴" if severity == "CRITICAL" else "🟠" if severity == "HIGH" else "🟡"
-        print(f"{emoji} DETECTION RESULT")
-        print(f"   Fraud Type : {fraud_type}")
-        print(f"   Confidence : {confidence}")
-        print(f"   Severity   : {severity}")
-        print(f"   Red Flags  : {', '.join(fraud_analysis.get('red_flags', []))}")
-        print(f"   Reasoning  : {fraud_analysis.get('reasoning', '')}")
-        print("-" * 60)
+Ka rubuta a Hausa a fili. Ka fara da mafi muhimmancin mataki."""
     else:
-        is_fraud = True
-        print("⚠️  Detection completed (raw output mode)")
-        print("-" * 60)
+        system_prompt = """You are an incident response advisor helping fraud victims in Nigeria and Africa.
 
-    # Node 2: Advise
-    incident_advice = node2_incident_advisor(user_input, fraud_analysis)
-    print("🚨 INCIDENT RESPONSE GUIDANCE")
-    print("-" * 60)
-    print(incident_advice)
-    print("-" * 60)
+Detected fraud: """ + fraud_type + """ | Severity: """ + severity + """
 
-    # Node 3: Educate
-    education = node3_awareness_educator(user_input, fraud_analysis, incident_advice)
-    print("\n🎓 AWARENESS EDUCATION")
-    print("-" * 60)
-    print(education)
-    print("=" * 60)
-    print("\n✅ OGA_WATCHAFRI analysis complete. Stay safe, stay sharp! 💪🌍")
-    print("=" * 60)
+Provide IMMEDIATE action steps to help the victim recover money or prevent further loss.
+Include REAL Nigerian institution contacts:
+- EFCC Fraud Hotline: 0800-326-5252
+- CBN Consumer Protection: 0700-225-5226
+- Nigeria Police Cybercrime: 08057750448
+- MTN (to freeze SIM): 180
+- Airtel: 121
+- GTBank: 0700-482-6328
+- Access Bank: 1-800-000-2348
+- Zenith Bank: 0700-350-8000
+- First Bank: 0700-343-2265
+
+Write in clear, plain language. Start with the most urgent step. Number each step."""
+
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": "Situation: " + situation + "\n\nFraud Analysis: " + str(fraud_analysis)}
+        ],
+        max_tokens=800,
+        temperature=0.4,
+    )
+    return response.choices[0].message.content.strip()
 
 
-# ── Entry Point ──────────────────────────────────────────────────────────────
+def node3_awareness_educator(situation, fraud_analysis, incident_advice, language='english'):
+    """Node 3 - Educate and create shareable WhatsApp content."""
+
+    fraud_type = fraud_analysis.get('fraud_type', 'fraud')
+
+    if language == 'hausa':
+        system_prompt = """Kai malamin wayar da kan jama'a ne game da zamba a Najeriya.
+
+Irin zamba: """ + fraud_type + """
+
+Ka rubuta sako guda daya mai sauki wanda za a iya raba shi a WhatsApp da dangi da abokai.
+Ka yi amfani da Hausa ta yau da kullun.
+Ka fara da GARGADI
+Ka bayyana yadda zamba ke aiki cikin jumla 2-3
+Ka ba da hanyoyi 3 na kare kai
+Ka kare da lambar EFCC: 0800-326-5252
+Tsawon: jumla 8-10 kawai."""
+    else:
+        system_prompt = """You are a fraud awareness educator for Nigerian and African communities.
+
+Fraud type detected: """ + fraud_type + """
+
+Create ONE shareable WhatsApp message that families can forward to protect each other.
+Use simple everyday language - mix English and Nigerian Pidgin naturally.
+Start with WARNING
+Explain how this scam works in 2-3 sentences
+Give 3 ways to protect yourself
+End with EFCC hotline: 0800-326-5252
+Add relevant emojis. Length: 8-10 sentences maximum."""
+
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": "Situation: " + situation + "\nFraud type: " + fraud_type}
+        ],
+        max_tokens=500,
+        temperature=0.6,
+    )
+    return response.choices[0].message.content.strip()
+
+
+def run_analysis(situation, language=None):
+    """Run all 3 nodes on a situation."""
+    if language is None:
+        language = detect_language(situation)
+
+    fraud_analysis = node1_fraud_detector(situation, language)
+    incident_advice = node2_incident_advisor(situation, fraud_analysis, language)
+    education = node3_awareness_educator(situation, fraud_analysis, incident_advice, language)
+
+    return {
+        'language': language,
+        'detection': fraud_analysis,
+        'incident_advice': incident_advice,
+        'education': education
+    }
+
+
 if __name__ == "__main__":
-    print("\nWelcome to OGA_WATCHAFRI 🛡️")
-    print("Tell me about a suspicious message, call, or situation.\n")
+    print("OGA_WATCHAFRI - The Boss That Watches Over Africa")
+    print("=" * 55)
+    print("Languages: English, Hausa, Nigerian Pidgin")
+    print("=" * 55)
 
-    # Demo mode: run with sample inputs if no argument provided
-    import sys
-    if len(sys.argv) > 1:
-        user_input = " ".join(sys.argv[1:])
-    else:
-        # Interactive mode
-        user_input = input("📝 Describe the suspicious situation: ").strip()
-        if not user_input:
-            # Fallback demo
-            user_input = "Someone sent me a WhatsApp message saying I won N500,000 and should send N5,000 to claim it"
-            print(f"\n[Demo mode] Using sample input: {user_input}\n")
+    situation = input("\nDescribe the situation / Ka bayyana abin da ya faru:\n> ")
+    if not situation.strip():
+        situation = "Someone sent me a WhatsApp message saying I won N500,000 and should send N5,000 to claim it"
 
-    run_oga_watchafri(user_input)
+    detected = detect_language(situation)
+    print("\n[Language detected: " + detected.upper() + "]")
+    print("\nAnalyzing... Ana nazari...\n")
+
+    result = run_analysis(situation, detected)
+    det = result['detection']
+
+    print("NODE 1 - " + ("GANO ZAMBA" if detected == 'hausa' else "FRAUD DETECTOR"))
+    print("  Type: " + str(det.get('fraud_type')))
+    print("  Severity: " + str(det.get('severity')))
+    for flag in det.get('red_flags', []):
+        print("  - " + flag)
+
+    print("\nNODE 2 - " + ("SHAWARA" if detected == 'hausa' else "INCIDENT ADVISOR"))
+    print(result['incident_advice'])
+
+    print("\nNODE 3 - " + ("ILIMI" if detected == 'hausa' else "AWARENESS EDUCATOR"))
+    print(result['education'])
