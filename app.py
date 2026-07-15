@@ -315,7 +315,7 @@ function handleTranslate(el) {
     out.style.color = 'var(--m)';
     out.style.display = 'block';
 
-    var clean = rawText.replace(/[^a-zA-Z0-9 .,!?:;-]/g, ' ').trim();
+    var clean = rawText.substring(0, 400).trim();
     if (clean.length > 400) clean = clean.substring(0, 400);
 
     var url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(clean) + '&langpair=en|' + langCode;
