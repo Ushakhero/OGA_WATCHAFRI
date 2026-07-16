@@ -2,7 +2,6 @@
 OGA_WATCHAFRI - Flask Web App with Chat Interface
 The Boss That Watches Over Africa
 Voice Mode, Multi-Language, Hausa Support, Translation
-Version 3.0 - Fixed translator apostrophe bug
 """
 
 from flask import Flask, jsonify, request
@@ -56,7 +55,7 @@ CHAT_UI = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OGA_WATCHAFRI - AI Fraud Defense for Africa</title>
+<title>OGA_WATCHAFRI -- AI Fraud Defense for Africa</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -184,6 +183,7 @@ var isListening = false;
 var recognition = null;
 var isSpeaking = false;
 var msgCounter = 0;
+
 var TRANSLATE_LANGS = [
   {code:'yo', label:'Yoruba'},
   {code:'ig', label:'Igbo'},
@@ -191,7 +191,7 @@ var TRANSLATE_LANGS = [
   {code:'en', label:'English'},
   {code:'fr', label:'French'},
   {code:'ar', label:'Arabic'},
-  {code:'pt', label:'Pidgin'}
+  {code:'pt', label:'Pidgin (Portuguese)'}
 ];
 
 function setLang(lang) {
@@ -258,28 +258,23 @@ function stopListening() {
   document.getElementById('userInput').placeholder = selectedLang === 'hausa' ? 'Ka bayyana abin da ya faru...' : 'Describe the suspicious message, call, or situation...';
 }
 
-function speakText(btnId, lang) {
-  var btn = document.getElementById(btnId);
-  if (!btn) return;
-  var text = btn.getAttribute('data-speech');
-  if (!text) return;
+function speakText(text, lang, btnId) {
   if (isSpeaking) {
     window.speechSynthesis.cancel();
     isSpeaking = false;
-    btn.className = 'action-btn';
-    btn.textContent = lang === 'hausa' ? 'Karanta' : 'Listen';
+    var b = document.getElementById(btnId);
+    if (b) b.textContent = lang === 'hausa' ? 'Karanta' : 'Listen';
     return;
   }
   var u = new SpeechSynthesisUtterance(text);
   u.lang = lang === 'hausa' ? 'ha' : 'en-NG';
   u.rate = 0.9;
   isSpeaking = true;
-  btn.className = 'action-btn speaking';
-  btn.textContent = lang === 'hausa' ? 'Tsaya' : 'Stop';
+  var b = document.getElementById(btnId);
+  if (b) { b.className = 'action-btn speaking'; b.textContent = lang === 'hausa' ? 'Tsaya' : 'Stop'; }
   u.onend = function() {
     isSpeaking = false;
-    btn.className = 'action-btn';
-    btn.textContent = lang === 'hausa' ? 'Karanta' : 'Listen';
+    if (b) { b.className = 'action-btn'; b.textContent = lang === 'hausa' ? 'Karanta' : 'Listen'; }
   };
   window.speechSynthesis.speak(u);
 }
@@ -287,57 +282,51 @@ function speakText(btnId, lang) {
 function toggleTranslatePanel(panelId) {
   var p = document.getElementById(panelId);
   if (!p) return;
-  if (p.style.display === 'block') {
-    p.style.display = 'none';
+  if (p.className.indexOf('open') >= 0) {
+    p.className = p.className.replace(' open', '').replace('open', '').trim();
   } else {
-    p.style.display = 'block';
+    p.className += ' open';
   }
 }
 
-function handleTranslate(el) {
-  try {
-    var langCode = el.getAttribute('data-lang');
-    var encodedText = el.getAttribute('data-encoded');
-    var outputId = el.getAttribute('data-output');
-    var panelId = el.getAttribute('data-panel');
-    var rawText = decodeURIComponent(escape(atob(encodedText)));
-
-    var panel = document.getElementById(panelId);
-    if (panel) {
-      var btns = panel.querySelectorAll('.lang-option');
-      for (var i = 0; i < btns.length; i++) btns[i].className = 'lang-option';
-    }
-    el.className = 'lang-option selected';
-
-    var out = document.getElementById(outputId);
-    if (!out) return;
-    out.textContent = 'Translating...';
-    out.style.color = 'var(--m)';
-    out.style.display = 'block';
-
-    var clean = rawText.substring(0, 400).trim();
-    if (clean.length > 400) clean = clean.substring(0, 400);
-
-    var url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(clean) + '&langpair=en|' + langCode;
-
-    fetch(url)
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (d.responseStatus === 200 && d.responseData && d.responseData.translatedText) {
-          out.textContent = d.responseData.translatedText;
-          out.style.color = 'var(--t)';
-        } else {
-          out.textContent = 'Translation limit reached. Please try again in a moment.';
-          out.style.color = 'var(--r)';
-        }
-      })
-      .catch(function() {
-        out.textContent = 'Translation unavailable. Please check your connection.';
-        out.style.color = 'var(--r)';
-      });
-  } catch(e) {
-    console.error('Translation error:', e);
+function doTranslate(langCode, rawText, outputId, btnId, panelId) {
+  // Mark selected button
+  var panel = document.getElementById(panelId);
+  if (panel) {
+    var btns = panel.querySelectorAll('.lang-option');
+    for (var i = 0; i < btns.length; i++) btns[i].className = 'lang-option';
   }
+  var selBtn = document.getElementById(btnId);
+  if (selBtn) selBtn.className = 'lang-option selected';
+
+  // Show output with loading message
+  var out = document.getElementById(outputId);
+  if (!out) return;
+  out.textContent = 'Translating...';
+  out.style.color = 'var(--m)';
+  out.className = 'translated-output show';
+
+  // Clean the text before sending
+  var clean = rawText.replace(/[*][*]/g, "").replace(/[#][#]/g, "").replace(/\n/g, " ").trim();
+  if (clean.length > 450) clean = clean.substring(0, 450);
+
+  var url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(clean) + '&langpair=en|' + langCode;
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.responseStatus === 200 && d.responseData && d.responseData.translatedText) {
+        out.textContent = d.responseData.translatedText;
+        out.style.color = 'var(--t)';
+      } else {
+        out.textContent = 'Translation limit reached. Try again in a moment.';
+        out.style.color = 'var(--r)';
+      }
+    })
+    .catch(function() {
+      out.textContent = 'Translation unavailable. Please check your connection.';
+      out.style.color = 'var(--r)';
+    });
 }
 
 function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
@@ -365,41 +354,26 @@ function showTyping() {
 }
 function removeTyping() { var el = document.getElementById('typing-indicator'); if (el) el.remove(); }
 
-function safeEncode(text) {
-  try {
-    return btoa(unescape(encodeURIComponent(text)));
-  } catch(e) {
-    return btoa(text.replace(/[^\x00-\x7F]/g, '?'));
-  }
-}
-
 function formatResponse(data, msgId) {
   var det = data.detection || {};
   var sev = (det.severity || 'medium').toLowerCase();
   var fraudType = det.fraud_type || 'Unknown';
-  var redFlags = (det.red_flags || []).map(function(f) {
-    return '<div style="margin:3px 0;font-size:13px;">&#9888; ' + f.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
-  }).join('');
-  var reasoning = (det.reasoning || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  var advice = (data.incident_advice || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  var education = (data.education || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  var redFlags = (det.red_flags || []).map(function(f) { return '<div style="margin:3px 0;font-size:13px;">&#9888; ' + f + '</div>'; }).join('');
+  var reasoning = det.reasoning || '';
+  var advice = data.incident_advice || '';
+  var education = data.education || '';
   var lang = data.language || 'english';
-
-  var speechText = fraudType + '. ' + (det.reasoning || '') + '. ' + (data.incident_advice || '');
+  var speechText = fraudType + '. ' + reasoning + '. ' + advice;
   var panelId = 'tp-' + msgId;
   var outputId = 'to-' + msgId;
   var speakId = 'sp-' + msgId;
-
-  var rawForTranslation = (data.incident_advice || '') + ' ' + (data.education || '');
-  var encodedText = safeEncode(rawForTranslation);
+  var rawForTranslation = advice + ' ' + education;
 
   var langBtns = TRANSLATE_LANGS
-    .filter(function(l) {
-      return !(l.code === 'ha' && lang === 'hausa') && !(l.code === 'en' && lang === 'english');
-    })
+    .filter(function(l) { return !(l.code === 'ha' && lang === 'hausa') && !(l.code === 'en' && lang === 'english'); })
     .map(function(l) {
       var btnId = 'lb-' + msgId + '-' + l.code;
-      return '<div class="lang-option" id="' + btnId + '" data-lang="' + l.code + '" data-encoded="' + encodedText + '" data-output="' + outputId + '" data-panel="' + panelId + '" onclick="handleTranslate(this)">' + l.label + '</div>';
+      return '<div class="lang-option" id="' + btnId + '" onclick="doTranslate(\'' + l.code + '\',' + JSON.stringify(rawForTranslation) + ',\'' + outputId + '\',\'' + btnId + '\',\'' + panelId + '\')">' + l.label + '</div>';
     }).join('');
 
   var n1 = lang === 'hausa' ? 'NODE 1 - GANO ZAMBA' : 'Node 1 - Fraud Detector';
@@ -410,16 +384,10 @@ function formatResponse(data, msgId) {
   var transTitle = lang === 'hausa' ? 'Zabi harshe:' : 'Translate to:';
   var doneLbl = lang === 'hausa' ? 'Bincike ya kare. Kare kanka!' : 'Analysis complete. Stay safe!';
 
-  var encodedSpeech = safeEncode(speechText);
-
-  return '<div style="font-weight:600;font-size:15px;margin-bottom:12px;">'
-    + (lang === 'hausa' ? 'OGA_WATCHAFRI ya bincika yanayin ka:' : 'OGA_WATCHAFRI has analyzed your situation:')
-    + '</div>'
+  return '<div style="font-weight:600;font-size:15px;margin-bottom:12px;">' + (lang === 'hausa' ? 'OGA_WATCHAFRI ya bincika yanayin ka:' : 'OGA_WATCHAFRI has analyzed your situation:') + '</div>'
     + '<div class="node-section node-detect">'
     + '<div class="node-title">&#128269; ' + n1 + '</div>'
-    + '<div style="font-weight:600;font-size:14px;">' + fraudType
-    + ' <span class="badge ' + sev + '">' + (det.severity || '').toUpperCase() + '</span>'
-    + ' <span class="badge" style="background:rgba(255,255,255,.1);color:var(--m)">' + (det.confidence || '') + ' confidence</span></div>'
+    + '<div style="font-weight:600;font-size:14px;">' + fraudType + ' <span class="badge ' + sev + '">' + (det.severity || '').toUpperCase() + '</span> <span class="badge" style="background:rgba(255,255,255,.1);color:var(--m)">' + (det.confidence || '') + ' confidence</span></div>'
     + (redFlags ? '<div style="margin-top:8px;">' + redFlags + '</div>' : '')
     + (reasoning ? '<div style="margin-top:8px;font-size:12px;color:var(--m);font-style:italic;">' + reasoning + '</div>' : '')
     + '</div>'
@@ -432,10 +400,10 @@ function formatResponse(data, msgId) {
     + '<pre>' + education + '</pre>'
     + '</div>'
     + '<div class="response-actions">'
-    + '<button class="action-btn" id="' + speakId + '" data-speech="' + encodedSpeech + '" onclick="speakText(\'' + speakId + '\',\'' + lang + '\')">&#128266; ' + listenLbl + '</button>'
+    + '<button class="action-btn" id="' + speakId + '" onclick="speakText(' + JSON.stringify(speechText) + ',\'' + lang + '\',\'' + speakId + '\')">&#128266; ' + listenLbl + '</button>'
     + '<button class="action-btn" onclick="toggleTranslatePanel(\'' + panelId + '\')">&#127758; ' + transLbl + '</button>'
     + '</div>'
-    + '<div class="translate-panel" id="' + panelId + '" style="display:none;">'
+    + '<div class="translate-panel" id="' + panelId + '">'
     + '<h4>' + transTitle + '</h4>'
     + '<div class="lang-grid">' + langBtns + '</div>'
     + '<div class="translated-output" id="' + outputId + '"></div>'
@@ -487,7 +455,7 @@ def index():
 def health():
     return jsonify({
         'status': 'OGA_WATCHAFRI is live',
-        'version': '3.0',
+        'version': '2.0',
         'features': ['voice-input', 'voice-output', 'hausa', 'translation']
     })
 
