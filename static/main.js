@@ -4,34 +4,140 @@ var recognition = null;
 var isSpeaking = false;
 var msgCounter = 0;
 
+// Language codes used by the MyMemory translate API for each UI language
+var LANG_CODES = { english: 'en', hausa: 'ha', yoruba: 'yo', igbo: 'ig' };
+
+// 'pt' (Portuguese) was previously mislabeled as "Pidgin" - fixed to 'pcm', the real
+// ISO code for Nigerian Pidgin. Yoruba/Igbo removed from this list since they are now
+// full UI languages (selectable via the top toggle) rather than translate-only targets.
 var TRANSLATE_LANGS = [
-  {code: 'yo', label: 'Yoruba'},
-  {code: 'ig', label: 'Igbo'},
   {code: 'ha', label: 'Hausa'},
   {code: 'en', label: 'English'},
+  {code: 'yo', label: 'Yoruba'},
+  {code: 'ig', label: 'Igbo'},
   {code: 'fr', label: 'French'},
   {code: 'ar', label: 'Arabic'},
-  {code: 'pt', label: 'Pidgin'}
+  {code: 'pcm', label: 'Nigerian Pidgin'}
 ];
+
+// All UI chrome text for each supported language, in one place.
+var UI_STRINGS = {
+  english: {
+    intro: 'OGA_WATCHAFRI has analyzed your situation:',
+    placeholder: 'Describe the suspicious message, call, or situation...',
+    heroTitle: 'Got a suspicious message, call, or situation?',
+    heroSub: 'Describe what happened and OGA_WATCHAFRI will detect the fraud, advise you on what to do, and teach you how to stay safe in plain language.',
+    node1: 'Node 1 - Fraud Detector',
+    node2: 'Node 2 - Incident Advisor',
+    node3: 'Node 3 - Awareness Educator',
+    listen: 'Listen',
+    translate: 'Translate',
+    translateTo: 'Translate to:',
+    done: 'Analysis complete. Stay safe!',
+    communityAlert: 'Community Alert: reported {n} times by other users before you.',
+    callEfcc: 'Call EFCC Now',
+    alertFamily: 'Alert Family on WhatsApp',
+    copyReport: 'Copy Report for EFCC',
+    copied: 'Copied!',
+    whatsappTemplate: '*OGA_WATCHAFRI Fraud Alert*\n\nType: {fraudType}\n\n{reasoning}\n\nBe careful - do not share OTPs or send money. Report to EFCC: 0800-326-5252',
+    reportTemplate: 'FRAUD REPORT (via OGA_WATCHAFRI)\nType: {fraudType}\nSeverity: {severity}\nRed flags: {redFlags}\nDetails: {reasoning}\nEFCC Hotline: 0800-326-5252'
+  },
+  hausa: {
+    intro: 'OGA_WATCHAFRI ya bincika yanayin ka:',
+    placeholder: 'Ka bayyana abin da ya faru...',
+    heroTitle: 'Kana da sako ko kira mai damuwa?',
+    heroSub: 'Ka bayyana abin da ya faru kuma OGA_WATCHAFRI zai gano zamba, ba da shawara, kuma ya koya maka yadda za ka kare kanka.',
+    node1: 'NODE 1 - GANO ZAMBA',
+    node2: 'NODE 2 - SHAWARA',
+    node3: 'NODE 3 - ILIMI',
+    listen: 'Karanta',
+    translate: 'Fassara',
+    translateTo: 'Zabi harshe:',
+    done: 'Bincike ya kare. Kare kanka!',
+    communityAlert: 'Sanarwar Al\'umma: an ba da rahoto {n} sau daga wasu masu amfani.',
+    callEfcc: 'Kira EFCC Yanzu',
+    alertFamily: 'Sanar da Iyali a WhatsApp',
+    copyReport: 'Kwafi Rahoto don EFCC',
+    copied: 'An kwafa!',
+    whatsappTemplate: '*Sanarwar Zamba ta OGA_WATCHAFRI*\n\nIri: {fraudType}\n\n{reasoning}\n\nKa yi hankali - kada ka baiwa kowa OTP ko ka aika kudi. Ka bayar da rahoto ga EFCC: 0800-326-5252',
+    reportTemplate: 'RAHOTON ZAMBA (ta OGA_WATCHAFRI)\nIri: {fraudType}\nMatakin hadari: {severity}\nAlamun hadari: {redFlags}\nBayani: {reasoning}\nLambar EFCC: 0800-326-5252'
+  },
+  yoruba: {
+    intro: 'OGA_WATCHAFRI ti ṣàyẹ̀wò ipò rẹ:',
+    placeholder: "Ṣàlàyé ifiranṣẹ ifura, ipè, tabi ipo náà...",
+    heroTitle: "Ṣe o ti gba ifiranṣẹ ifura, ipè, tabi ipo ajeji kan?",
+    heroSub: "Ṣàlàyé ohun tí ó ṣẹlẹ̀, OGA_WATCHAFRI yóò sì ṣàwárí jìbìtì náà, fún ọ ní ìmọ̀ràn nípa ohun tí o gbọ́dọ̀ ṣe, kí ó sì kọ́ ọ bí o ṣe lè dáàbò bo ara rẹ ní èdè tí ó rọrùn.",
+    node1: 'APA 1 - AWARI JIBITI',
+    node2: 'APA 2 - IMORAN',
+    node3: 'APA 3 - EKO',
+    listen: 'Gbọ́',
+    translate: 'Túmọ̀',
+    translateTo: 'Túmọ̀ sí:',
+    done: 'Ìtúpalẹ̀ ti parí. Dáàbò bo ara rẹ!',
+    communityAlert: "Ìkìlọ̀ Àdúgbò: a ti fi ìròyìn yìí ránṣẹ́ ní ìgbà {n} láti ọ̀dọ̀ àwọn oníbàárà mìíràn.",
+    callEfcc: 'Pe EFCC Nísisìyí',
+    alertFamily: 'Kìlọ̀ Fún Ẹbí Lórí WhatsApp',
+    copyReport: 'Da Ìròyìn Kọ fún EFCC',
+    copied: 'Ti dà kọ!',
+    whatsappTemplate: "*Ìkìlọ̀ Jìbìtì láti ọ̀dọ̀ OGA_WATCHAFRI*\n\nIrú: {fraudType}\n\n{reasoning}\n\nṢọ́ra - má ṣe fi OTP tàbí kí o fi owó ránṣẹ́ fún ẹnikẹ́ni. Fi ìròyìn ránṣẹ́ sí EFCC: 0800-326-5252",
+    reportTemplate: 'ÌRÒYÌN JÌBÌTÍ (láti ọ̀dọ̀ OGA_WATCHAFRI)\nIrú: {fraudType}\nÌwọ̀n ewu: {severity}\nÀmì ewu: {redFlags}\nÀlàyé: {reasoning}\nNọ́mbà EFCC: 0800-326-5252'
+  },
+  igbo: {
+    intro: 'OGA_WATCHAFRI enyochala ọnọdụ gị:',
+    placeholder: 'Kọwaa ozi enyo, oku, ma ọ bụ ọnọdụ ahụ...',
+    heroTitle: 'Ị nwetara ozi enyo, oku, ma ọ bụ ọnọdụ enyo?',
+    heroSub: "Kọwaa ihe merenụ, OGA_WATCHAFRI ga-achọpụta aghụghọ ahụ, dụọ gị ọdụ ihe ị ga-eme, ma kụziere gị otu ị ga-esi nchekwa onwe gị n'asụsụ dị mfe.",
+    node1: 'AKỤKỤ 1 - ACHỌPỤTA AGHỤGHỌ',
+    node2: 'AKỤKỤ 2 - NDỤMỌDỤ',
+    node3: 'AKỤKỤ 3 - MMỤTA',
+    listen: 'Gee ntị',
+    translate: 'Tụgharịa',
+    translateTo: 'Tụgharịa gaa:',
+    done: 'Nyocha agwụla. Chebe onwe gị!',
+    communityAlert: "Ọkwa Obodo: e kọwo aghụghọ a ugboro {n} site n'aka ndị ọzọ.",
+    callEfcc: 'Kpọọ EFCC Ugbu a',
+    alertFamily: 'Dọọ Ezinụlọ Aka na WhatsApp',
+    copyReport: 'Detuo Akụkọ maka EFCC',
+    copied: 'Edetuola!',
+    whatsappTemplate: "*Ọkwa Aghụghọ site na OGA_WATCHAFRI*\n\nỤdị: {fraudType}\n\n{reasoning}\n\n\nKpachara anya - ekwela ka i nye onye ọ bụla OTP ma ọ bụ zipu ego. Kọọ akụkọ nye EFCC: 0800-326-5252",
+    reportTemplate: 'AKỤKỌ AGHỤGHỌ (site na OGA_WATCHAFRI)\nỤdị: {fraudType}\nỌkwa ihe egwu: {severity}\nAkara ize ndụ: {redFlags}\nNkọwa: {reasoning}\nNọmba EFCC: 0800-326-5252'
+  }
+};
+
+var LANG_BUTTON_IDS = {
+  english: 'btn-en',
+  hausa: 'btn-ha',
+  yoruba: 'btn-yo',
+  igbo: 'btn-ig'
+};
+
+var LANG_CHIP_CLASSES = {
+  english: 'en-chip',
+  hausa: 'ha-chip',
+  yoruba: 'yo-chip',
+  igbo: 'ig-chip'
+};
 
 function setLang(lang) {
   selectedLang = lang;
-  document.getElementById('btn-en').className = 'lang-btn' + (lang === 'english' ? ' active' : '');
-  document.getElementById('btn-ha').className = 'lang-btn' + (lang === 'hausa' ? ' active' : '');
-  var enChips = document.querySelectorAll('.en-chip');
-  var haChips = document.querySelectorAll('.ha-chip');
-  for (var i = 0; i < enChips.length; i++) enChips[i].style.display = lang === 'hausa' ? 'none' : '';
-  for (var i = 0; i < haChips.length; i++) haChips[i].style.display = lang === 'hausa' ? '' : 'none';
-  var input = document.getElementById('userInput');
-  if (lang === 'hausa') {
-    input.placeholder = 'Ka bayyana abin da ya faru...';
-    document.getElementById('heroTitle').textContent = 'Kana da sako ko kira mai damuwa?';
-    document.getElementById('heroSub').textContent = 'Ka bayyana abin da ya faru kuma OGA_WATCHAFRI zai gano zamba, ba da shawara, kuma ya koya maka yadda za ka kare kanka.';
-  } else {
-    input.placeholder = 'Describe the suspicious message, call, or situation...';
-    document.getElementById('heroTitle').textContent = 'Got a suspicious message, call, or situation?';
-    document.getElementById('heroSub').textContent = 'Describe what happened and OGA_WATCHAFRI will detect the fraud, advise you on what to do, and teach you how to stay safe in plain language.';
+
+  for (var key in LANG_BUTTON_IDS) {
+    var btn = document.getElementById(LANG_BUTTON_IDS[key]);
+    if (btn) btn.className = 'lang-btn' + (key === lang ? ' active' : '');
   }
+
+  for (var key2 in LANG_CHIP_CLASSES) {
+    var chips = document.querySelectorAll('.' + LANG_CHIP_CLASSES[key2]);
+    for (var i = 0; i < chips.length; i++) chips[i].style.display = (key2 === lang) ? '' : 'none';
+  }
+
+  var strings = UI_STRINGS[lang] || UI_STRINGS.english;
+  var input = document.getElementById('userInput');
+  if (input) input.placeholder = strings.placeholder;
+  var heroTitleEl = document.getElementById('heroTitle');
+  if (heroTitleEl) heroTitleEl.textContent = strings.heroTitle;
+  var heroSubEl = document.getElementById('heroSub');
+  if (heroSubEl) heroSubEl.textContent = strings.heroSub;
 }
 
 function toggleVoice() {
@@ -183,6 +289,40 @@ function safeEncode(text) {
   catch(e) { return btoa(text.replace(/[^\x00-\x7F]/g, '?')); }
 }
 
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+}
+
+function copyReport(btn) {
+  var encoded = btn.getAttribute('data-report');
+  var text;
+  try { text = decodeURIComponent(escape(atob(encoded))); } catch(e) { text = encoded; }
+  var copiedLabel = btn.getAttribute('data-copied-label');
+  var copyLabel = btn.getAttribute('data-copy-label');
+
+  function showCopied() {
+    btn.textContent = copiedLabel;
+    setTimeout(function() { btn.textContent = '\uD83D\uDCCB ' + copyLabel; }, 2000);
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(showCopied).catch(function() {
+      fallbackCopy(text);
+      showCopied();
+    });
+  } else {
+    fallbackCopy(text);
+    showCopied();
+  }
+}
+
 function formatResponse(data, msgId) {
   var det = data.detection || {};
   var sev = (det.severity || 'medium').toLowerCase();
@@ -201,26 +341,54 @@ function formatResponse(data, msgId) {
   var encodedText = safeEncode(rawForTranslation);
   var encodedSpeech = safeEncode((det.fraud_type || '') + '. ' + (det.reasoning || '') + '. ' + (data.incident_advice || ''));
 
+  var currentCode = LANG_CODES[lang] || 'en';
   var langBtns = TRANSLATE_LANGS
-    .filter(function(l) {
-      return !(l.code === 'ha' && lang === 'hausa') && !(l.code === 'en' && lang === 'english');
-    })
+    .filter(function(l) { return l.code !== currentCode; })
     .map(function(l) {
       var btnId = 'lb-' + msgId + '-' + l.code;
       return '<div class="lang-option" id="' + btnId + '" data-lang="' + l.code + '" data-encoded="' + encodedText + '" data-output="' + outputId + '" data-panel="' + panelId + '" onclick="handleTranslate(this)">' + l.label + '</div>';
     }).join('');
 
-  var n1 = lang === 'hausa' ? 'NODE 1 - GANO ZAMBA' : 'Node 1 - Fraud Detector';
-  var n2 = lang === 'hausa' ? 'NODE 2 - SHAWARA' : 'Node 2 - Incident Advisor';
-  var n3 = lang === 'hausa' ? 'NODE 3 - ILIMI' : 'Node 3 - Awareness Educator';
-  var listenLbl = lang === 'hausa' ? 'Karanta' : 'Listen';
-  var transLbl = lang === 'hausa' ? 'Fassara' : 'Translate';
-  var transTitle = lang === 'hausa' ? 'Zabi harshe:' : 'Translate to:';
-  var doneLbl = lang === 'hausa' ? 'Bincike ya kare. Kare kanka!' : 'Analysis complete. Stay safe!';
+  var strings = UI_STRINGS[lang] || UI_STRINGS.english;
+  var n1 = strings.node1;
+  var n2 = strings.node2;
+  var n3 = strings.node3;
+  var listenLbl = strings.listen;
+  var transLbl = strings.translate;
+  var transTitle = strings.translateTo;
+  var doneLbl = strings.done;
+
+  var communityBanner = '';
+  if (data.community_alerts && data.community_alerts.length) {
+    communityBanner = data.community_alerts.map(function(a) {
+      var msg = strings.communityAlert.replace('{n}', a.report_count);
+      return '<div class="community-alert">&#9888; ' + msg + '</div>';
+    }).join('');
+  }
+
+  var escalation = '';
+  if (sev === 'critical') {
+    var waText = strings.whatsappTemplate
+      .replace('{fraudType}', det.fraud_type || '')
+      .replace('{reasoning}', det.reasoning || '');
+    var waUrl = 'https://wa.me/?text=' + encodeURIComponent(waText);
+    var reportText = strings.reportTemplate
+      .replace('{fraudType}', det.fraud_type || '')
+      .replace('{severity}', det.severity || '')
+      .replace('{redFlags}', (det.red_flags || []).join('; '))
+      .replace('{reasoning}', det.reasoning || '');
+    var encodedReport = safeEncode(reportText);
+    escalation = '<div class="escalation-actions">'
+      + '<a class="action-btn escalate-btn" href="tel:08003265252">&#128222; ' + strings.callEfcc + '</a>'
+      + '<a class="action-btn escalate-btn" href="' + waUrl + '" target="_blank" rel="noopener">&#128241; ' + strings.alertFamily + '</a>'
+      + '<button class="action-btn escalate-btn" data-report="' + encodedReport + '" data-copied-label="' + strings.copied + '" data-copy-label="' + strings.copyReport + '" onclick="copyReport(this)">&#128203; ' + strings.copyReport + '</button>'
+      + '</div>';
+  }
 
   return '<div style="font-weight:600;font-size:15px;margin-bottom:12px;">'
-    + (lang === 'hausa' ? 'OGA_WATCHAFRI ya bincika yanayin ka:' : 'OGA_WATCHAFRI has analyzed your situation:')
+    + strings.intro
     + '</div>'
+    + communityBanner
     + '<div class="node-section node-detect">'
     + '<div class="node-title">' + n1 + '</div>'
     + '<div style="font-weight:600;font-size:14px;">' + fraudType
@@ -237,6 +405,7 @@ function formatResponse(data, msgId) {
     + '<div class="node-title">' + n3 + '</div>'
     + '<pre>' + education + '</pre>'
     + '</div>'
+    + escalation
     + '<div class="response-actions">'
     + '<button class="action-btn" id="' + speakId + '" data-speech="' + encodedSpeech + '" onclick="speakText(\'' + speakId + '\',\'' + lang + '\')">' + listenLbl + '</button>'
     + '<button class="action-btn" onclick="toggleTranslatePanel(\'' + panelId + '\')">' + transLbl + '</button>'
