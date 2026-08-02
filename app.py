@@ -193,7 +193,7 @@ LOGO_URL = "https://raw.githubusercontent.com/Ushakhero/OGA_WATCHAFRI/main/ogawa
 # Bump this string any time static/main.js or static/style.css changes.
 # It forces browsers (and any CDN/proxy cache) to fetch the new file
 # instead of an old cached copy after a deploy.
-STATIC_VERSION = "3"
+STATIC_VERSION = "4"
 
 CHAT_UI = """<!DOCTYPE html>
 <html lang="en">
@@ -224,6 +224,7 @@ CHAT_UI = """<!DOCTYPE html>
   <button class="lang-btn" id="btn-ha" onclick="setLang('hausa')">Hausa</button>
   <button class="lang-btn" id="btn-yo" onclick="setLang('yoruba')">Yoruba</button>
   <button class="lang-btn" id="btn-ig" onclick="setLang('igbo')">Igbo</button>
+  <button class="lang-btn" id="btn-pi" onclick="setLang('pidgin')">Pidgin</button>
 </div>
 
 <div class="examples" id="examplesDiv">
@@ -243,6 +244,10 @@ CHAT_UI = """<!DOCTYPE html>
   <div class="example-chip ig-chip" style="display:none" onclick="useExample(this)">MTN kpọrọ m, jụọ maka nọmba SIM m na NIN m</div>
   <div class="example-chip ig-chip" style="display:none" onclick="useExample(this)">Enwetara m ozi si na GTBank na akaụntụ m ga-emechi, pịa njikọ a gtb-verify.net</div>
   <div class="example-chip ig-chip" style="display:none" onclick="useExample(this)">Otu onye nyere m onyinye itinye ego crypto nke ga-enye uru 300% n'ime ụbọchị asaa</div>
+  <div class="example-chip pi-chip" style="display:none" onclick="useExample(this)">Somebody send me WhatsApp message say I win N500,000 and I go send N5,000 before I fit collect am</div>
+  <div class="example-chip pi-chip" style="display:none" onclick="useExample(this)">MTN call me dey ask for my SIM serial number and NIN</div>
+  <div class="example-chip pi-chip" style="display:none" onclick="useExample(this)">I get SMS from GTBank say dem go block my account, make I click dis link gtb-verify.net</div>
+  <div class="example-chip pi-chip" style="display:none" onclick="useExample(this)">Somebody offer me crypto investment wey go give 300% return for 7 days</div>
 </div>
 
 <div class="chat-container" id="chatContainer"></div>

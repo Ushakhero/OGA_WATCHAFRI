@@ -47,6 +47,15 @@ IGBO_WORDS = [
     'mechie', 'akauntu', 'uzo', 'otutu', 'ubochi', 'asaa', 'mba'
 ]
 
+# Nigerian Pidgin word list for language detection - distinctive markers that
+# don't overlap heavily with standard English
+PIDGIN_WORDS = [
+    'dey', 'wetin', 'abeg', 'sabi', 'wahala', 'una', 'dem', 'waka',
+    'yarn', 'gbege', 'shakara', 'kolo', 'japa', 'sef', 'naija',
+    'wella', 'sha', 'abi', 'comot', 'omo', 'katakata', 'vex',
+    'chop', 'wetin dey', 'no wahala', 'wella wella', 'shine', 'jare'
+]
+
 
 def detect_language(text):
     """
@@ -61,6 +70,7 @@ def detect_language(text):
         'hausa': sum(1 for w in words if w in HAUSA_WORDS),
         'yoruba': sum(1 for w in words if w in YORUBA_WORDS),
         'igbo': sum(1 for w in words if w in IGBO_WORDS),
+        'pidgin': sum(1 for w in words if w in PIDGIN_WORDS),
     }
 
     best_lang = max(scores, key=scores.get)
@@ -113,6 +123,19 @@ Zaghachi naanị n'ụdị JSON a - edekwala ihe ọ bụla n'èzí JSON:
   "red_flags": ["ihe akara ize ndụ 1", "ihe akara ize ndụ 2"],
   "reasoning": "Nkọwa dị mkpirikpi n'asụsụ Igbo"
 }"""
+    elif language == 'pidgin':
+        system_prompt = """You be expert wey sabi detect fraud and scam wella for Nigeria and Africa.
+
+You go detect di type of fraud, how e serious, and di reason why you talk say na so.
+
+Answer only for dis JSON format - no other tin outside di JSON:
+{
+  "fraud_type": "Type of fraud wey you detect",
+  "severity": "CRITICAL or HIGH or MEDIUM or LOW",
+  "confidence": "HIGH or MEDIUM or LOW",
+  "red_flags": ["red flag 1", "red flag 2"],
+  "reasoning": "Short explanation for Pidgin"
+}"""
     else:
         system_prompt = """You are an expert fraud detection agent specializing in Nigerian and African fraud patterns.
 
@@ -148,6 +171,7 @@ fake CBN or bank alerts, crypto investment fraud, OPay or PalmPay reversal fraud
         'hausa': ("Zamba", "Ba a iya tabbatarwa"),
         'yoruba': ("Jìbìtì", "A kò lè jẹ́rìí sí i"),
         'igbo': ("Aghụghọ", "Enweghị ike ịkọwa nkọwa"),
+        'pidgin': ("Fraud", "No fit confam di details"),
     }
 
     try:
@@ -220,6 +244,23 @@ Kpọtụrụ ọnụọgụ ekwentị eziokwu:
 - Zenith Bank: 0700-350-8000
 
 Dee ya n'asụsụ Igbo doro anya. Bido site na nzọụkwụ kacha mkpa. Gụọ nọmba nzọụkwụ ọ bụla."""
+    elif language == 'pidgin':
+        system_prompt = """You be person wey dey advise people wey scam don catch for Nigeria.
+
+Wetin we don detect: """ + fraud_type + """ | How e serious: """ + severity + """
+
+Give am quick steps wey go help am recover money or stop more wahala.
+Mention real phone numbers:
+- EFCC: 0800-326-5252
+- CBN: 0700-225-5226
+- Cyber Police: 08057750448
+- MTN: 180 (to block SIM)
+- Airtel: 121
+- GTBank: 0700-482-6328
+- Access Bank: 1-800-000-2348
+- Zenith Bank: 0700-350-8000
+
+Write am for clear Pidgin. Start with di step wey important pass. Read every number well well."""
     else:
         system_prompt = """You are an incident response advisor helping fraud victims in Nigeria and Africa.
 
@@ -290,6 +331,17 @@ Kọwaa otu aghụghọ a si arụ ọrụ na ahịrịokwu 2-3
 Nye ụzọ 3 isi chebe onwe gị
 Jiri nọmba EFCC mechie: 0800-326-5252
 Tinye emoji kwesịrị ekwesị. Ogologo: ahịrịokwu 8-10 kacha."""
+    elif language == 'pidgin':
+        system_prompt = """You be teacher wey dey teach people for Nigeria how to no fall fraud/scam.
+
+Type of fraud wey we detect: """ + fraud_type + """
+
+Write one message wey person fit forward for WhatsApp give family and friends.
+Start with WARNING
+Explain how di fraud dey work for 2-3 sentence
+Give 3 ways to protect yourself
+Finish with EFCC number: 0800-326-5252
+Add correct emoji. Length: 8-10 sentence only."""
     else:
         system_prompt = """You are a fraud awareness educator for Nigerian and African communities.
 

@@ -5,19 +5,21 @@ var isSpeaking = false;
 var msgCounter = 0;
 
 // Language codes used by the MyMemory translate API for each UI language
-var LANG_CODES = { english: 'en', hausa: 'ha', yoruba: 'yo', igbo: 'ig' };
+var LANG_CODES = { english: 'en', hausa: 'ha', yoruba: 'yo', igbo: 'ig', pidgin: 'pcm' };
 
 // 'pt' (Portuguese) was previously mislabeled as "Pidgin" - fixed to 'pcm', the real
 // ISO code for Nigerian Pidgin. Yoruba/Igbo removed from this list since they are now
 // full UI languages (selectable via the top toggle) rather than translate-only targets.
+// 'pcm' (Nigerian Pidgin) removed from this list - MyMemory only supports ISO
+// 639-1 codes and has no valid code for Pidgin, so every request failed.
+// Pidgin is now a full UI/AI language instead (see UI_STRINGS.pidgin below).
 var TRANSLATE_LANGS = [
   {code: 'ha', label: 'Hausa'},
   {code: 'en', label: 'English'},
   {code: 'yo', label: 'Yoruba'},
   {code: 'ig', label: 'Igbo'},
   {code: 'fr', label: 'French'},
-  {code: 'ar', label: 'Arabic'},
-  {code: 'pcm', label: 'Nigerian Pidgin'}
+  {code: 'ar', label: 'Arabic'}
 ];
 
 // All UI chrome text for each supported language, in one place.
@@ -101,6 +103,26 @@ var UI_STRINGS = {
     copied: 'Edetuola!',
     whatsappTemplate: "*Ọkwa Aghụghọ site na OGA_WATCHAFRI*\n\nỤdị: {fraudType}\n\n{reasoning}\n\n\nKpachara anya - ekwela ka i nye onye ọ bụla OTP ma ọ bụ zipu ego. Kọọ akụkọ nye EFCC: 0800-326-5252",
     reportTemplate: 'AKỤKỌ AGHỤGHỌ (site na OGA_WATCHAFRI)\nỤdị: {fraudType}\nỌkwa ihe egwu: {severity}\nAkara ize ndụ: {redFlags}\nNkọwa: {reasoning}\nNọmba EFCC: 0800-326-5252'
+  },
+  pidgin: {
+    intro: 'OGA_WATCHAFRI don check your matter:',
+    placeholder: 'Tell us wetin happen - message, call, or situation...',
+    heroTitle: 'You get suspicious message, call, or situation?',
+    heroSub: 'Tell us wetin happen and OGA_WATCHAFRI go detect di fraud, advise you wetin to do, and teach you how to stay safe for simple language.',
+    node1: 'NODE 1 - DETECT FRAUD',
+    node2: 'NODE 2 - ADVICE',
+    node3: 'NODE 3 - LESSON',
+    listen: 'Listen',
+    translate: 'Translate',
+    translateTo: 'Translate go:',
+    done: "Analysis don finish. Stay safe!",
+    communityAlert: 'Community Warning: people don report am {n} times before you.',
+    callEfcc: 'Call EFCC Now',
+    alertFamily: 'Warn Family for WhatsApp',
+    copyReport: 'Copy Report for EFCC',
+    copied: "E don copy!",
+    whatsappTemplate: "*OGA_WATCHAFRI Fraud Warning*\n\nType: {fraudType}\n\n{reasoning}\n\nBe careful - no share OTP or send money. Report to EFCC: 0800-326-5252",
+    reportTemplate: 'FRAUD REPORT (from OGA_WATCHAFRI)\nType: {fraudType}\nHow e serious: {severity}\nRed flags: {redFlags}\nDetails: {reasoning}\nEFCC Hotline: 0800-326-5252'
   }
 };
 
@@ -108,14 +130,16 @@ var LANG_BUTTON_IDS = {
   english: 'btn-en',
   hausa: 'btn-ha',
   yoruba: 'btn-yo',
-  igbo: 'btn-ig'
+  igbo: 'btn-ig',
+  pidgin: 'btn-pi'
 };
 
 var LANG_CHIP_CLASSES = {
   english: 'en-chip',
   hausa: 'ha-chip',
   yoruba: 'yo-chip',
-  igbo: 'ig-chip'
+  igbo: 'ig-chip',
+  pidgin: 'pi-chip'
 };
 
 function setLang(lang) {
